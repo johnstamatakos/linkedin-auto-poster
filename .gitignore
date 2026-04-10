@@ -1,0 +1,10 @@
+node_modules/
+.env
+data/
+*.db
+*.db-shm
+*.db-wal
+skills/*.md
+!skills/*.example.md
+config.json
+!config.example.json

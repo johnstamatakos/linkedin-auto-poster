@@ -1,0 +1,23 @@
+{
+  "name": "linkedin-auto-poster",
+  "version": "1.0.0",
+  "description": "Autonomous LinkedIn post generator and scheduler",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "axios": "^1.7.2",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "node-cron": "^3.0.3",
+    "dotenv": "^16.4.5",
+    "rss-parser": "^3.13.0",
+    "better-sqlite3": "^9.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

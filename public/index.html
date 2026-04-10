@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LinkedIn Auto Poster</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0f1117;--surface:#1a1d27;--surface2:#21253a;--border:#2d3148;
+      --text:#e2e8f0;--muted:#94a3b8;--accent:#5865f2;--accent-h:#4752c4;
+      --green:#34d399;--yellow:#fbbf24;--red:#f87171;
+    }
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+    .layout{display:flex;min-height:100vh}
+
+    /* Sidebar */
+    .sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);padding:20px 0;flex-shrink:0;position:fixed;top:0;bottom:0;left:0;overflow-y:auto;display:flex;flex-direction:column}
+    .logo{padding:0 20px 20px;font-size:15px;font-weight:600;border-bottom:1px solid var(--border);margin-bottom:12px}
+    .logo span{color:var(--accent)}
+    .nav{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;font-size:14px;color:var(--muted);border-left:2px solid transparent;transition:all .15s}
+    .nav:hover{color:var(--text);background:var(--surface2)}
+    .nav.active{color:var(--text);border-left-color:var(--accent);background:var(--surface2)}
+    .badge{margin-left:auto;background:var(--accent);color:#fff;font-size:11px;font-weight:600;padding:2px 7px;border-radius:10px;min-width:20px;text-align:center}
+    .badge.warn{background:var(--yellow);color:#111}
+    .sidebar-footer{margin-top:auto;padding:16px 20px}
+
+    /* Main */
+    .main{margin-left:220px;padding:32px;max-width:960px}
+    .page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px}
+    .page-title{font-size:22px;font-weight:600}
+    .page-sub{font-size:13px;color:var(--muted);margin-top:4px}
+
+    /* Cards */
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+    .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+    .stat{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px}
+    .stat-val{font-size:28px;font-weight:700}
+    .stat-lbl{font-size:12px;color:var(--muted);margin-top:4px}
+
+    /* Draft cards */
+    .draft{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px;margin-bottom:14px}
+    .draft-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+    .tag{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500}
+    .tag-src{background:#1e3a5f;color:#7dd3fc}
+    .tag-score{background:#1a3a2a;color:#6ee7b7}
+    .tag-conn{background:#2d1b69;color:#c4b5fd}
+    .article-ref{font-size:12px;color:var(--muted);margin-bottom:12px}
+    .article-ref a{color:var(--accent);text-decoration:none}
+    .article-ref a:hover{text-decoration:underline}
+    .insight{font-size:12px;color:var(--muted);font-style:italic;padding:10px 14px;background:var(--surface2);border-radius:6px;border-left:3px solid var(--border);margin-bottom:14px}
+    .post-view{font-size:14px;line-height:1.6;white-space:pre-wrap;padding:16px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);margin-bottom:16px}
+    .post-edit{font-size:14px;line-height:1.6;padding:14px;background:var(--bg);border:1px solid var(--accent);border-radius:8px;color:var(--text);width:100%;resize:vertical;min-height:200px;margin-bottom:8px;font-family:inherit}
+    .char-count{font-size:12px;color:var(--muted);text-align:right;margin-bottom:12px}
+    .char-count.over{color:var(--red)}
+
+    /* Buttons */
+    .btn-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .btn{padding:8px 16px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s;text-decoration:none;display:inline-flex;align-items:center}
+    .btn-primary{background:var(--accent);color:#fff}
+    .btn-primary:hover{background:var(--accent-h)}
+    .btn-success{background:#065f46;color:var(--green);border:1px solid #059669}
+    .btn-success:hover{background:#047857}
+    .btn-danger{background:#450a0a;color:var(--red);border:1px solid #991b1b}
+    .btn-danger:hover{background:#7f1d1d}
+    .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+    .btn-ghost:hover{color:var(--text);border-color:#4a5080}
+    .btn-warn{background:#78350f;color:var(--yellow);border:1px solid #d97706}
+    .btn-warn:hover{background:#92400e}
+
+    /* Status dot */
+    .dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+    .dot-green{background:var(--green)}
+    .dot-red{background:var(--red)}
+
+    /* LinkedIn status bar */
+    .li-bar{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:20px;font-size:13px}
+
+    /* Queue */
+    .q-item{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:grab}
+    .q-item:active{cursor:grabbing}
+    .q-item.dragging{opacity:.4}
+    .q-item.drag-over{border-color:var(--accent)}
+    .q-pos{font-size:18px;font-weight:700;color:var(--accent);width:24px;flex-shrink:0}
+    .q-body{flex:1;min-width:0}
+    .q-title{font-size:13px;font-weight:500}
+    .q-meta{font-size:11px;color:var(--muted);margin-top:2px}
+    .q-preview{font-size:12px;color:var(--text);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+    /* Config tags */
+    .tag-wrap{display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px}
+    .cfg-tag{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12px}
+    .cfg-tag button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:0}
+    .cfg-tag button:hover{color:var(--red)}
+    .add-row{display:flex;gap:8px;margin-top:8px}
+    .add-row input{flex:1;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;outline:none}
+    .add-row input:focus{border-color:var(--accent)}
+    .cfg-input{width:100%;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;outline:none}
+    .cfg-input:focus{border-color:var(--accent)}
+    .cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px}
+    .cfg-lbl{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+    .section-title{font-size:14px;font-weight:600;margin-bottom:6px}
+    .section-sub{font-size:12px;color:var(--muted);margin-bottom:10px}
+
+    /* Empty */
+    .empty{text-align:center;padding:48px 20px;color:var(--muted);font-size:14px}
+    .empty .icon{font-size:40px;margin-bottom:12px}
+
+    /* Toast */
+    .toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:1000;opacity:0;transition:opacity .3s;pointer-events:none}
+    .toast.show{opacity:1}
+    .toast.success{background:#065f46;color:var(--green);border:1px solid #059669}
+    .toast.error{background:#450a0a;color:var(--red);border:1px solid #991b1b}
+
+    /* Modal */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:500}
+    .modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;width:400px}
+    .modal h3{font-size:16px;margin-bottom:12px}
+    .modal textarea{width:100%;height:100px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;padding:10px;resize:none;margin-bottom:14px;font-family:inherit;outline:none}
+    .modal textarea:focus{border-color:var(--accent)}
+    .hidden{display:none!important}
+  </style>
+</head>
+<body>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="logo"><span>LI</span> Auto Poster</div>
+    <div class="nav active" data-page="dashboard">📊 Dashboard</div>
+    <div class="nav" data-page="review">📝 Review Drafts <span class="badge" id="nb-review">0</span></div>
+    <div class="nav" data-page="queue">📋 Post Queue <span class="badge warn" id="nb-queue">0</span></div>
+    <div class="nav" data-page="history">📤 Post History</div>
+    <div class="nav" data-page="config">⚙️ Settings</div>
+    <div class="sidebar-footer">
+      <button class="btn btn-ghost" style="width:100%" onclick="logout()">Sign Out</button>
+    </div>
+  </nav>
+
+  <main class="main" id="main"></main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay hidden" id="rejectModal">
+  <div class="modal">
+    <h3>Reject Draft</h3>
+    <textarea id="rejectNote" placeholder="Optional: reason for rejection..."></textarea>
+    <div class="btn-row" style="justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeRejectModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmReject()">Reject</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let currentPage = 'dashboard';
+let pendingDrafts = [];
+let queueDrafts = [];
+let rejectDraftId = null;
+let dragSrc = null;
+
+// ─── Nav ──────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav').forEach(el => {
+  el.addEventListener('click', () => go(el.dataset.page));
+});
+
+function go(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav').forEach(n => n.classList.toggle('active', n.dataset.page === page));
+  render(page);
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+async function render(page) {
+  const m = document.getElementById('main');
+  if (page === 'dashboard') await renderDashboard(m);
+  else if (page === 'review')  await renderReview(m);
+  else if (page === 'queue')   await renderQueue(m);
+  else if (page === 'history') await renderHistory(m);
+  else if (page === 'config')  await renderConfig(m);
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+async function renderDashboard(m) {
+  m.innerHTML = `<div class="page-header"><div><div class="page-title">Dashboard</div><div class="page-sub">Your automated LinkedIn pipeline</div></div><div class="btn-row"><button class="btn btn-ghost" onclick="runCrawl()">▶ Run Crawl Now</button></div></div><div id="dc"><div class="empty"><div class="icon">⏳</div>Loading...</div></div>`;
+  const { stats, linkedInStatus: li, config } = await api('/api/dashboard');
+  setBadges(stats);
+
+  const liBar = li.connected
+    ? `<span class="dot dot-green"></span> LinkedIn connected &mdash; token valid for ${li.expiresIn}m`
+    : `<span class="dot dot-red"></span> LinkedIn not connected &mdash; <a href="/auth/linkedin" style="color:var(--accent)">Connect now</a>`;
+
+  document.getElementById('dc').innerHTML = `
+    <div class="li-bar">${liBar}</div>
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-val">${stats.draftsPendingReview}</div><div class="stat-lbl">Awaiting Review</div></div>
+      <div class="stat"><div class="stat-val">${stats.draftsApproved}</div><div class="stat-lbl">Approved (Backlog)</div></div>
+      <div class="stat"><div class="stat-val">${stats.postsTotal}</div><div class="stat-lbl">Posts Published</div></div>
+      <div class="stat"><div class="stat-val">${stats.articlesTotal}</div><div class="stat-lbl">Articles Scraped</div></div>
+    </div>
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:10px">Schedule</div>
+      <div style="font-size:13px;color:var(--muted);line-height:2.2">
+        <div>Crawl: ${esc(config.schedule?.crawlCron)} &nbsp; (${esc(config.schedule?.timezone)})</div>
+        <div>Posts: ${esc(config.schedule?.postDayOfWeek)} at ${esc(config.schedule?.postTime)}</div>
+        <div>Last post: ${stats.lastPost ? new Date(stats.lastPost).toLocaleDateString() : 'None yet'}</div>
+        <div>Backlog: ${stats.draftsApproved} post${stats.draftsApproved === 1 ? '' : 's'} queued</div>
+      </div>
+    </div>
+    ${stats.draftsPendingReview > 0 ? `
+    <div class="card" style="border-color:var(--accent);background:#1a1d35">
+      <div style="font-size:14px;font-weight:600;margin-bottom:10px">${stats.draftsPendingReview} draft${stats.draftsPendingReview>1?'s':''} waiting for your review</div>
+      <button class="btn btn-primary" onclick="go('review')">Review Now</button>
+    </div>` : ''}
+    <div style="margin-top:8px;display:flex;align-items:center;gap:12px">
+      <button class="btn btn-warn" onclick="postNow()">Post Next Approved Now</button>
+      <span style="font-size:12px;color:var(--muted)">Bypasses the schedule — use to test or catch up</span>
+    </div>`;
+}
+
+// ─── Review ───────────────────────────────────────────────────────────────────
+async function renderReview(m) {
+  m.innerHTML = `<div class="page-header"><div><div class="page-title">Review Drafts</div><div class="page-sub">Approve, edit, or reject AI-generated posts</div></div></div><div id="rv"></div>`;
+  pendingDrafts = await api('/api/drafts/pending');
+  renderPending();
+}
+
+function renderPending() {
+  const el = document.getElementById('rv');
+  if (!el) return;
+  if (!pendingDrafts.length) {
+    el.innerHTML = `<div class="empty"><div class="icon">✅</div>No drafts pending. Click "Run Crawl Now" on the dashboard to generate new ones.</div>`;
+    return;
+  }
+  el.innerHTML = pendingDrafts.map(d => {
+    const chars = d.post_text.length;
+    return `
+    <div class="draft" id="draft-${d.id}">
+      <div class="draft-meta">
+        <span class="tag tag-src">${esc(d.article_source||'Unknown')}</span>
+        ${d.eval_score ? `<span class="tag tag-score">Score ${d.eval_score}/10</span>` : ''}
+        ${d.primary_connection ? `<span class="tag tag-conn">${esc(d.primary_connection)}</span>` : ''}
+      </div>
+      ${d.article_title ? `<div class="article-ref">From: ${d.article_url
+        ? `<a href="${esc(d.article_url)}" target="_blank">${esc(d.article_title)}</a>`
+        : esc(d.article_title)}</div>` : ''}
+      ${d.key_insight ? `<div class="insight">Key insight: ${esc(d.key_insight)}</div>` : ''}
+      <div class="post-view" id="pv-${d.id}">${esc(d.post_text)}</div>
+      <textarea class="post-edit hidden" id="pe-${d.id}" oninput="updateCount(${d.id})">${esc(d.post_text)}</textarea>
+      <div class="char-count hidden" id="cc-${d.id}">${chars} / 2800</div>
+      <div class="btn-row">
+        <button class="btn btn-success" onclick="approve(${d.id})">✓ Approve</button>
+        <button class="btn btn-danger" onclick="openReject(${d.id})">✗ Reject</button>
+        <button class="btn btn-ghost" id="eb-${d.id}" onclick="toggleEdit(${d.id})">Edit</button>
+        <button class="btn btn-primary hidden" id="sb-${d.id}" onclick="saveEdit(${d.id})">Save</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleEdit(id) {
+  const pv = document.getElementById(`pv-${id}`);
+  const pe = document.getElementById(`pe-${id}`);
+  const cc = document.getElementById(`cc-${id}`);
+  const eb = document.getElementById(`eb-${id}`);
+  const sb = document.getElementById(`sb-${id}`);
+  const editing = !pe.classList.contains('hidden');
+  if (editing) {
+    const d = pendingDrafts.find(x => x.id === id);
+    if (d) pe.value = d.post_text;
+    pv.classList.remove('hidden'); pe.classList.add('hidden');
+    cc.classList.add('hidden'); eb.textContent = 'Edit'; sb.classList.add('hidden');
+  } else {
+    pv.classList.add('hidden'); pe.classList.remove('hidden');
+    cc.classList.remove('hidden'); eb.textContent = 'Cancel'; sb.classList.remove('hidden');
+    updateCount(id);
+  }
+}
+
+function updateCount(id) {
+  const pe = document.getElementById(`pe-${id}`);
+  const cc = document.getElementById(`cc-${id}`);
+  const n = pe.value.length;
+  cc.textContent = `${n} / 2800`;
+  cc.classList.toggle('over', n > 2800);
+}
+
+async function saveEdit(id) {
+  const text = document.getElementById(`pe-${id}`).value.trim();
+  await api(`/api/drafts/${id}`, 'PUT', { post_text: text });
+  const d = pendingDrafts.find(x => x.id === id);
+  if (d) { d.post_text = text; document.getElementById(`pv-${id}`).textContent = text; }
+  toggleEdit(id);
+  toast('Saved', 'success');
+}
+
+async function approve(id) {
+  await api(`/api/drafts/${id}/approve`, 'POST');
+  pendingDrafts = pendingDrafts.filter(d => d.id !== id);
+  const card = document.getElementById(`draft-${id}`);
+  if (card) { card.style.cssText += 'opacity:0;transition:opacity .3s'; setTimeout(() => card.remove(), 300); }
+  toast('Approved and added to queue', 'success');
+  const { stats } = await api('/api/dashboard');
+  setBadges(stats);
+}
+
+function openReject(id) {
+  rejectDraftId = id;
+  document.getElementById('rejectNote').value = '';
+  document.getElementById('rejectModal').classList.remove('hidden');
+}
+function closeRejectModal() {
+  rejectDraftId = null;
+  document.getElementById('rejectModal').classList.add('hidden');
+}
+async function confirmReject() {
+  if (!rejectDraftId) return;
+  const note = document.getElementById('rejectNote').value;
+  await api(`/api/drafts/${rejectDraftId}/reject`, 'POST', { note });
+  closeRejectModal();
+  pendingDrafts = pendingDrafts.filter(d => d.id !== rejectDraftId);
+  renderPending();
+  toast('Rejected', 'success');
+  const { stats } = await api('/api/dashboard');
+  setBadges(stats);
+}
+
+// ─── Queue ────────────────────────────────────────────────────────────────────
+async function renderQueue(m) {
+  const config = await api('/api/config');
+  m.innerHTML = `<div class="page-header"><div><div class="page-title">Post Queue</div><div class="page-sub">Drag to reorder. First post publishes next ${esc(config.schedule?.postDayOfWeek||'Tuesday')}.</div></div></div><div id="qv"></div>`;
+  queueDrafts = await api('/api/drafts/queue');
+  renderQueueItems();
+}
+
+function renderQueueItems() {
+  const el = document.getElementById('qv');
+  if (!el) return;
+  if (!queueDrafts.length) {
+    el.innerHTML = `<div class="empty"><div class="icon">📭</div>Queue is empty. Approve drafts to build your backlog.</div>`;
+    return;
+  }
+  el.innerHTML = queueDrafts.map((d, i) => `
+    <div class="q-item" draggable="true" data-id="${d.id}" data-i="${i}"
+         ondragstart="ds(event,${i})" ondragover="dov(event)" ondragleave="dlv(event)"
+         ondrop="drop(event,${i})" ondragend="dend(event)">
+      <div class="q-pos">${i+1}</div>
+      <div class="q-body">
+        <div class="q-title">${esc(d.article_title||'Untitled')}</div>
+        <div class="q-meta">${esc(d.primary_connection||'')} &bull; Approved ${fmtDate(d.approved_at)}</div>
+        <div class="q-preview">${esc(d.post_text.slice(0,120))}...</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" style="font-size:12px;padding:6px 10px" onclick='previewQ(${JSON.stringify(d.post_text)})'>Preview</button>
+        <button class="btn btn-danger" style="font-size:12px;padding:6px 10px" onclick="removeFromQueue(${d.id})">Remove</button>
+      </div>
+    </div>`).join('');
+}
+
+function ds(e, i)  { dragSrc = i; e.target.classList.add('dragging'); }
+function dov(e)    { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+function dlv(e)    { e.currentTarget.classList.remove('drag-over'); }
+function dend(e)   { e.target.classList.remove('dragging'); dragSrc = null; }
+async function drop(e, ti) {
+  e.preventDefault(); e.currentTarget.classList.remove('drag-over');
+  if (dragSrc === null || dragSrc === ti) return;
+  const moved = queueDrafts.splice(dragSrc, 1)[0];
+  queueDrafts.splice(ti, 0, moved);
+  renderQueueItems();
+  await api('/api/drafts/queue/reorder', 'POST', { orderedIds: queueDrafts.map(d => d.id) });
+  toast('Order saved', 'success');
+}
+
+function previewQ(text) { alert(text); }
+
+async function removeFromQueue(id) {
+  if (!confirm('Remove this post from the queue?')) return;
+  await api(`/api/drafts/${id}/reject`, 'POST', { note: 'Removed from queue' });
+  queueDrafts = queueDrafts.filter(d => d.id !== id);
+  renderQueueItems();
+  toast('Removed', 'success');
+}
+
+// ─── History ──────────────────────────────────────────────────────────────────
+async function renderHistory(m) {
+  m.innerHTML = `<div class="page-header"><div><div class="page-title">Post History</div><div class="page-sub">Posts published to LinkedIn</div></div></div>`;
+  const posts = await api('/api/posts/recent');
+  if (!posts.length) { m.innerHTML += `<div class="empty"><div class="icon">📤</div>No posts published yet.</div>`; return; }
+  m.innerHTML += posts.map(p => `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px">
+        <span style="color:var(--muted)">${fmtDate(p.posted_at)}</span>
+        <span class="tag ${p.status==='posted'?'tag-score':'tag-src'}">${esc(p.status)}</span>
+      </div>
+      ${p.article_title ? `<div style="font-size:12px;color:var(--muted);margin-bottom:8px">${esc(p.article_title)}</div>` : ''}
+      <div class="post-view" style="font-size:13px">${esc(p.post_text)}</div>
+      ${p.linkedin_post_id ? `<div style="font-size:11px;color:var(--muted);margin-top:6px">LinkedIn ID: ${esc(p.linkedin_post_id)}</div>` : ''}
+    </div>`).join('');
+}
+
+// ─── Config ───────────────────────────────────────────────────────────────────
+async function renderConfig(m) {
+  const config = await api('/api/config');
+  const li = (await api('/api/dashboard')).linkedInStatus;
+
+  m.innerHTML = `
+    <div class="page-header">
+      <div><div class="page-title">Settings</div><div class="page-sub">Topics, sources, and schedule</div></div>
+      <button class="btn btn-primary" onclick="saveConfig()">Save Settings</button>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Topics</div>
+      <div class="section-sub">Articles are filtered by relevance to these topics.</div>
+      <div class="tag-wrap" id="topics-wrap">
+        ${config.topics.map(t => `<span class="cfg-tag">${esc(t)}<button onclick="removeTag(this)">×</button></span>`).join('')}
+      </div>
+      <div class="add-row">
+        <input id="new-topic" placeholder="Add a topic..." onkeydown="if(event.key==='Enter') addTag('topics-wrap','new-topic')" />
+        <button class="btn btn-ghost" onclick="addTag('topics-wrap','new-topic')">Add</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">HN Search Queries</div>
+      <div class="section-sub">Terms used to query Hacker News.</div>
+      <div class="tag-wrap" id="hn-wrap">
+        ${(config.sources?.hackernews?.queries||[]).map(q => `<span class="cfg-tag">${esc(q)}<button onclick="removeTag(this)">×</button></span>`).join('')}
+      </div>
+      <div class="add-row">
+        <input id="new-hn" placeholder="Add a query..." onkeydown="if(event.key==='Enter') addTag('hn-wrap','new-hn')" />
+        <button class="btn btn-ghost" onclick="addTag('hn-wrap','new-hn')">Add</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Schedule &amp; Pipeline</div>
+      <div class="cfg-grid">
+        <div>
+          <label class="cfg-lbl">Crawl Cron</label>
+          <input id="crawl-cron" class="cfg-input" value="${esc(config.schedule?.crawlCron||'0 8 * * 1,3,5')}" />
+        </div>
+        <div>
+          <label class="cfg-lbl">Post Cron</label>
+          <input id="post-cron" class="cfg-input" value="${esc(config.schedule?.postCron||'0 9 * * 2')}" />
+        </div>
+        <div>
+          <label class="cfg-lbl">Timezone</label>
+          <input id="tz" class="cfg-input" value="${esc(config.schedule?.timezone||'America/New_York')}" />
+        </div>
+        <div>
+          <label class="cfg-lbl">Min Relevance Score (1-10)</label>
+          <input id="min-score" type="number" min="1" max="10" class="cfg-input" value="${config.pipeline?.minRelevanceScore||7}" />
+        </div>
+        <div>
+          <label class="cfg-lbl">Max Drafts Per Crawl Run</label>
+          <input id="max-drafts" type="number" min="1" max="10" class="cfg-input" value="${config.pipeline?.maxDraftsPerRun||3}" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">LinkedIn Connection</div>
+      <div style="font-size:13px;color:var(--muted);margin:10px 0 16px">
+        ${li.connected
+          ? `<span class="dot dot-green" style="margin-right:6px"></span>Connected. Token expires in ${li.expiresIn}m.`
+          : `<span class="dot dot-red" style="margin-right:6px"></span>${esc(li.reason)}`}
+      </div>
+      <a href="/auth/linkedin" class="btn btn-primary">Reconnect LinkedIn</a>
+    </div>`;
+}
+
+function removeTag(btn) { btn.closest('.cfg-tag').remove(); }
+
+function addTag(wrapId, inputId) {
+  const inp = document.getElementById(inputId);
+  const val = inp.value.trim();
+  if (!val) return;
+  const wrap = document.getElementById(wrapId);
+  const span = document.createElement('span');
+  span.className = 'cfg-tag';
+  span.innerHTML = `${esc(val)}<button onclick="removeTag(this)">×</button>`;
+  wrap.appendChild(span);
+  inp.value = '';
+}
+
+async function saveConfig() {
+  const topics   = [...document.querySelectorAll('#topics-wrap .cfg-tag')].map(el => el.textContent.replace('×','').trim());
+  const hnQuery  = [...document.querySelectorAll('#hn-wrap .cfg-tag')].map(el => el.textContent.replace('×','').trim());
+  const config   = await api('/api/config');
+  const updated  = {
+    ...config,
+    topics,
+    sources: { ...config.sources, hackernews: { ...config.sources.hackernews, queries: hnQuery } },
+    schedule: {
+      ...config.schedule,
+      crawlCron: document.getElementById('crawl-cron').value,
+      postCron:  document.getElementById('post-cron').value,
+      timezone:  document.getElementById('tz').value,
+    },
+    pipeline: {
+      ...config.pipeline,
+      minRelevanceScore: Number(document.getElementById('min-score').value),
+      maxDraftsPerRun:   Number(document.getElementById('max-drafts').value),
+    },
+  };
+  await api('/api/config', 'PUT', updated);
+  toast('Settings saved', 'success');
+}
+
+// ─── Manual triggers ──────────────────────────────────────────────────────────
+async function runCrawl() {
+  await api('/api/run/crawl', 'POST');
+  toast('Crawl started. New drafts will appear in Review Drafts once complete.', 'success');
+}
+
+async function postNow() {
+  if (!confirm('Post the next approved item to LinkedIn right now?')) return;
+  const r = await api('/api/run/post', 'POST');
+  if (r.skipped)      toast(`Skipped: ${r.reason}`, 'error');
+  else if (r.posted)  { toast('Posted!', 'success'); render('dashboard'); }
+  else                toast(`Failed: ${r.error}`, 'error');
+}
+
+// ─── Utils ────────────────────────────────────────────────────────────────────
+async function api(path, method='GET', body=null) {
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  if (r.status === 401) { window.location.href='/login'; return; }
+  if (!r.ok) { const e = await r.json().catch(()=>({error:r.statusText})); throw new Error(e.error||'API error'); }
+  return r.json();
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(iso) {
+  if (!iso) return 'Unknown';
+  return new Date(iso).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'});
+}
+
+function setBadges(stats) {
+  document.getElementById('nb-review').textContent = stats.draftsPendingReview;
+  document.getElementById('nb-queue').textContent  = stats.draftsApproved;
+}
+
+function toast(msg, type='success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type} show`;
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+async function logout() {
+  await api('/api/logout', 'POST');
+  window.location.href = '/login';
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+const params = new URLSearchParams(window.location.search);
+if (params.get('linked')) toast('LinkedIn connected!', 'success');
+if (params.get('error'))  toast('Error: ' + params.get('error'), 'error');
+if (params.get('linked') || params.get('error')) history.replaceState({}, '', '/');
+
+render('dashboard');
+</script>
+</body>
+</html>
