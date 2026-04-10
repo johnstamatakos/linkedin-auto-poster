@@ -27,13 +27,16 @@ ${skill('job-context')}
 
 Return ONLY a valid JSON object. No markdown, no explanation, no preamble.`;
 
-  const user = `Evaluate this article.
+  const user = `Write a LinkedIn post for this article.
 
 Title: ${article.title}
 Source: ${article.source}
 URL: ${article.url}
-Published: ${article.published_at || 'unknown'}
-Excerpt: ${article.summary || '(none)'}`;
+Excerpt: ${article.summary || '(none)'}
+
+Include the article URL (${article.url}) as a natural reference in the post,
+either inline or on its own line after the closing observation, before the
+disclaimer. Label it simply as "Source:" or work it in naturally.`;
 
   try {
     const msg = await client.messages.create({
@@ -42,8 +45,13 @@ Excerpt: ${article.summary || '(none)'}`;
       system,
       messages: [{ role: 'user', content: user }],
     });
-    const raw = msg.content[0].text.trim().replace(/^```json\n?/, '').replace(/\n?```$/, '');
-    return JSON.parse(raw);
+    const raw = msg.content[0].text.trim();
+    // Strip markdown fences
+    const stripped = raw.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
+    // Extract just the JSON object in case there's extra text around it
+    const match = stripped.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('No JSON object found in response');
+    return JSON.parse(match[0]);
   } catch (err) {
     console.error(`[pipeline] Eval failed "${article.title}":`, err.message);
     return null;
