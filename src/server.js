@@ -9,7 +9,8 @@ const db = require('./db');
 const { getSourceStats, getEngagementTrends } = db;
 const { getAuthUrl, exchangeCode, getAuthStatus } = require('./linkedin');
 const scheduler = require('./scheduler');
-const { regenerateDraft, submitArticleUrl } = require('./pipeline');
+const { regenerateDraft, submitArticleUrl, reloadSkills } = require('./pipeline');
+const { streamCalibration, appendPointOfView } = require('./calibrate');
 
 // ─── Config helpers ───────────────────────────────────────────────────────────
 
@@ -190,6 +191,63 @@ app.get('/api/analytics', requireLogin, (req, res) => {
     sources: db.getSourceStats(),
     trends:  db.getEngagementTrends(),
   });
+});
+
+// ─── Skills / Calibrate ───────────────────────────────────────────────────────
+
+const SKILLS_DIR     = path.join(__dirname, '..', 'skills');
+const ALLOWED_SKILLS = ['writing-style', 'content-eval', 'job-context'];
+
+app.get('/api/skills/:name', requireLogin, (req, res) => {
+  if (!ALLOWED_SKILLS.includes(req.params.name))
+    return res.status(400).json({ error: 'Unknown skill' });
+  try {
+    const content = fs.readFileSync(path.join(SKILLS_DIR, `${req.params.name}.md`), 'utf-8');
+    res.json({ name: req.params.name, content });
+  } catch {
+    res.json({ name: req.params.name, content: '' });
+  }
+});
+
+app.put('/api/skills/:name', requireLogin, (req, res) => {
+  if (!ALLOWED_SKILLS.includes(req.params.name))
+    return res.status(400).json({ error: 'Unknown skill' });
+  if (!req.body.content || typeof req.body.content !== 'string')
+    return res.status(400).json({ error: 'content required' });
+  fs.writeFileSync(path.join(SKILLS_DIR, `${req.params.name}.md`), req.body.content, 'utf-8');
+  reloadSkills();
+  res.json({ ok: true });
+});
+
+app.post('/api/calibrate/interview', requireLogin, async (req, res) => {
+  const { skillName, currentContent, messages } = req.body;
+  if (!ALLOWED_SKILLS.includes(skillName))
+    return res.status(400).json({ error: 'Unknown skill' });
+
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  try {
+    await streamCalibration({ skillName, currentContent, messages, res });
+  } catch (err) {
+    res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
+  } finally {
+    res.end();
+  }
+});
+
+app.post('/api/calibrate/pov', requireLogin, async (req, res) => {
+  const { rejectionNote, postText } = req.body;
+  if (!rejectionNote) return res.status(400).json({ error: 'rejectionNote required' });
+  try {
+    const updated = await appendPointOfView(rejectionNote, postText || '');
+    fs.writeFileSync(path.join(SKILLS_DIR, 'writing-style.md'), updated, 'utf-8');
+    reloadSkills();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─── Config ───────────────────────────────────────────────────────────────────

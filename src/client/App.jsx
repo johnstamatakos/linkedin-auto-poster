@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard'
 import ReviewDrafts from './pages/ReviewDrafts'
 import PostQueue from './pages/PostQueue'
 import Settings from './pages/Settings'
+import Calibrate from './pages/Calibrate'
 const Analytics = lazy(() => import('./pages/Analytics'))
 import { api } from './utils/api'
 
@@ -55,6 +56,9 @@ export default function App() {
           <Suspense fallback={<div className="empty"><div className="icon">⏳</div>Loading...</div>}>
             <Analytics showToast={showToast} />
           </Suspense>
+        )}
+        {currentPage === 'calibrate' && (
+          <Calibrate showToast={showToast} />
         )}
         {currentPage === 'config' && (
           <Settings showToast={showToast} />

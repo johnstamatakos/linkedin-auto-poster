@@ -10,9 +10,9 @@ Stay on top of what's moving in tech — without spending hours finding it. This
 
 The hardest part of staying active on LinkedIn isn't writing — it's finding the right things to write about. Scanning Hacker News, keeping up with research blogs, and filtering out noise takes real time. By the time something interesting surfaces, the moment to share it has often passed.
 
-This tool handles discovery and drafting. You tell it what you work on, what sources you trust, and — critically — what you actually believe about where the industry is heading. Those opinions get encoded as "Points of View" in your configuration and become first-class signals in the evaluation step. An article that validates or challenges one of your convictions scores higher than one that's just topically adjacent to your work. When a draft is written, it leads with your point of view rather than summarizing the article. It monitors those sources, scores each article against your context, and drafts a post only when something is genuinely worth sharing. The result lands in a review queue where you can approve, edit, or skip it in under a minute.
+The core idea here is that you teach the tool who you are and what you believe, and it does the discovery for you. You encode your professional context, your opinions on where the industry is heading, and the specific topics that intersect with your work. That configuration becomes the intelligence layer — it's what determines which articles surface, why they're relevant to you specifically, and what angle a post should take. The drafting is downstream of that. A well-calibrated setup produces content worth sharing; a generic one produces noise.
 
-The goal is to lower the overhead of sharing your perspective — so that when something relevant breaks in AI infrastructure, distributed systems, developer tooling, or wherever your domain sits, you can put a point of view on it and reach your network before the conversation moves on.
+The goal is to lower the overhead of sharing your perspective — so that when something relevant breaks in your domain, you can put a point of view on it and reach your network before the conversation moves on.
 
 ---
 
@@ -20,17 +20,52 @@ The goal is to lower the overhead of sharing your perspective — so that when s
 
 Three scheduled jobs run autonomously. You interact through the review UI.
 
-**Crawl** — Mon/Wed/Fri at 8am: pulls articles from Hacker News, Reddit, and RSS feeds. You can also paste any URL into the dashboard to evaluate and draft it immediately, bypassing the crawl entirely.
+**Crawl** — Mon/Wed/Fri at 8am: pulls articles from Hacker News, Reddit, and RSS feeds. You can also paste any URL on the dashboard to evaluate and draft it immediately, bypassing the crawl.
 
-**Evaluate + Draft** — runs after each crawl: Claude scores every new article on relevance, timeliness, specificity, and post potential against your job context and content criteria. Articles that pass the threshold get a draft written in your voice. Recent rejection notes you've left are fed back into this step — so the evaluator learns what you've already passed on.
+**Evaluate + Draft** — runs after each crawl: Claude scores every new article against your job context and content criteria. Articles that connect to your work or match a conviction in your Points of View score higher. Those that pass the threshold get a draft written in your voice — leading with your perspective, not a summary of the article. Rejection notes you've left on previous drafts are fed back into this step so the evaluator recalibrates over time.
 
-**Review** — your queue in the web UI: approve, edit inline, reject with a note, or ask Claude to regenerate the draft with new guidance (e.g. "focus on the business impact"). Drag to reorder the approval queue.
+**Review** — your queue in the web UI: approve, edit inline, reject with a note, or ask Claude to regenerate with new guidance. Drag to reorder the queue. When rejecting, you can flag the note as a new Point of View — it gets added to your writing style configuration automatically.
 
 **Publish** — Tuesday at 9am: the first approved post goes live on LinkedIn. If the queue is empty, nothing posts that week.
 
-**Analytics** — daily sync: pulls impressions, reactions, and comments for each published post. The Analytics page shows engagement trends over time and source-level pass rates so you can see which feeds are generating quality drafts and which to cut.
+**Analytics** — daily sync: pulls impressions, reactions, and comments per post. The Analytics page shows engagement trends over time and source-level pass rates so you can see which feeds earn their place.
 
 All schedules and thresholds are configurable from the Settings page.
+
+---
+
+## Calibrate
+
+This is where you actually configure the tool to work for you. The **Calibrate** tab in the UI walks you through setting up and refining three skill files — the markdown prompt files that control how the pipeline thinks.
+
+Each skill can be set up through a guided AI interview or edited directly. The interview asks focused questions — one at a time — to surface the context, opinions, and preferences that make the pipeline produce relevant content. When you've answered enough, you ask it to propose a revision. It generates a complete updated file that you can review, edit, and save.
+
+Skills are loaded fresh on every pipeline run, so changes take effect immediately without a server restart.
+
+### The three skills
+
+**Writing Style** (`skills/writing-style.md`) — your LinkedIn voice. Covers tone, format rules, banned phrases, and — most importantly — your Points of View: a set of named topic areas with specific, opinionated convictions. When a draft is written, it leads with whichever Point of View most closely matches the article. The post is your reaction to the article, not a summary of it. The more specific and debatable your convictions, the better the drafts.
+
+**Job Context** (`skills/job-context.md`) — your professional grounding. Current role, past experience, and public metrics that make application sentences feel specific rather than generic. Also defines grounding rules: which references are fair game, and when it's better to make a strong industry observation than force a personal reference that doesn't fit.
+
+**Content Evaluation** (`skills/content-eval.md`) — your relevance filter. Controls scoring weights across four dimensions (relevance, timeliness, specificity, post potential), defines high- and low-relevance signals for your domain, and sets the minimum score an article needs to reach drafting. Articles that connect to a Point of View qualify as relevant even if the topic area isn't explicitly listed.
+
+### Setting up from scratch
+
+```bash
+cp skills/writing-style.example.md skills/writing-style.md
+cp skills/job-context.example.md skills/job-context.md
+cp skills/content-eval.example.md skills/content-eval.md
+```
+
+Your real skill files are gitignored — personal details stay out of version control. Then open the **Calibrate** tab and work through each file with the AI interview, or fill in the example files directly and edit from there.
+
+### Tuning tips
+
+- **Too few drafts** — lower `minRelevanceScore` in Settings, or add more sources and HN queries
+- **Drafts feel generic** — add more specific products and concrete outcomes to `job-context.md`; add more Points of View to `writing-style.md`
+- **Voice is off** — add good and bad example sentences to `writing-style.md` (examples outperform abstract rules)
+- **Wrong articles passing** — add those topic areas to the low-relevance signals in `content-eval.md`, or use the rejection note when reviewing to flag the pattern
 
 ---
 
@@ -74,33 +109,7 @@ UI_PASSWORD=<your chosen password>
 npm start
 ```
 
-Open http://localhost:3000, sign in, click **Connect LinkedIn**, then **Run Crawl Now** to generate your first drafts.
-
----
-
-## Skills
-
-Skills are markdown prompt files in `skills/` that control how the pipeline behaves. They're loaded fresh on every run — edit and save, no restart needed.
-
-```bash
-cp skills/writing-style.example.md skills/writing-style.md
-cp skills/job-context.example.md skills/job-context.md
-cp skills/content-eval.example.md skills/content-eval.md
-```
-
-Your real skill files are gitignored — personal details stay out of version control.
-
-| File | Controls |
-|---|---|
-| `writing-style.md` | Tone, format rules, structure, and example sentences in your voice |
-| `job-context.md` | Your role, products, and a "Points of View" section where you write out your convictions about the industry — these act as relevance multipliers and shape how every draft is framed |
-| `content-eval.md` | Scoring weights, high-relevance signals, and what to always skip |
-
-**Tuning tips:**
-- Too few drafts → lower `minRelevanceScore` in Settings, or add more sources
-- Drafts feel generic → add more specific products and real examples to `job-context.md`
-- Voice is off → add concrete example sentences to `writing-style.md` (examples outperform abstract rules)
-- Wrong articles passing → add those topics to the low-relevance signals in `content-eval.md`
+Open http://localhost:3000, sign in, click **Connect LinkedIn**, then go to **Calibrate** to set up your skills before running your first crawl.
 
 ---
 

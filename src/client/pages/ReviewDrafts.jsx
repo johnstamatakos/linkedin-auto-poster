@@ -66,7 +66,7 @@ function DraftCard({ draft, onApprove, onReject, onRegenerate }) {
 
       <div className="btn-row">
         <button className="btn btn-success" onClick={() => onApprove(draft.id)}>✓ Approve</button>
-        <button className="btn btn-danger" onClick={() => onReject(draft.id)}>✗ Reject</button>
+        <button className="btn btn-danger" onClick={() => onReject(draft)}>✗ Reject</button>
         {!editing && !regenMode && (
           <>
             <button className="btn btn-ghost" onClick={() => setEditing(true)}>Edit</button>
@@ -111,7 +111,7 @@ function DraftCard({ draft, onApprove, onReject, onRegenerate }) {
 
 export default function ReviewDrafts({ showToast, updateBadges }) {
   const [drafts, setDrafts] = useState([])
-  const [rejectingId, setRejectingId] = useState(null)
+  const [rejectingDraft, setRejectingDraft] = useState(null) // { id, post_text }
 
   useEffect(() => {
     api('/api/drafts/pending').then(setDrafts)
@@ -124,11 +124,21 @@ export default function ReviewDrafts({ showToast, updateBadges }) {
     updateBadges()
   }
 
-  async function confirmReject(note) {
-    await api(`/api/drafts/${rejectingId}/reject`, 'POST', { note })
-    setDrafts(prev => prev.filter(d => d.id !== rejectingId))
-    setRejectingId(null)
-    showToast('Rejected', 'success')
+  async function confirmReject(note, addAsPov) {
+    const { id, post_text } = rejectingDraft
+    await api(`/api/drafts/${id}/reject`, 'POST', { note })
+    setDrafts(prev => prev.filter(d => d.id !== id))
+    setRejectingDraft(null)
+    if (addAsPov && note.trim()) {
+      try {
+        await api('/api/calibrate/pov', 'POST', { rejectionNote: note, postText: post_text })
+        showToast('Rejected and added as Point of View', 'success')
+      } catch {
+        showToast('Rejected (Point of View save failed)', 'error')
+      }
+    } else {
+      showToast('Rejected', 'success')
+    }
     updateBadges()
   }
 
@@ -162,16 +172,16 @@ export default function ReviewDrafts({ showToast, updateBadges }) {
             key={d.id}
             draft={d}
             onApprove={approve}
-            onReject={setRejectingId}
+            onReject={d => setRejectingDraft({ id: d.id, post_text: d.post_text })}
             onRegenerate={regenerate}
           />
         ))
       )}
 
-      {rejectingId !== null && (
+      {rejectingDraft !== null && (
         <RejectModal
           onConfirm={confirmReject}
-          onClose={() => setRejectingId(null)}
+          onClose={() => setRejectingDraft(null)}
         />
       )}
     </>

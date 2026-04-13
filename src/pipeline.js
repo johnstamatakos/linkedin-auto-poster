@@ -310,4 +310,10 @@ async function runPipeline(config) {
   return { draftsCreated: created };
 }
 
-module.exports = { runPipeline, regenerateDraft, submitArticleUrl };
+function reloadSkills() {
+  skills.contentEval  = fs.readFileSync(path.join(SKILLS, 'content-eval.md'),  'utf-8');
+  skills.jobContext   = fs.readFileSync(path.join(SKILLS, 'job-context.md'),   'utf-8');
+  skills.writingStyle = fs.readFileSync(path.join(SKILLS, 'writing-style.md'), 'utf-8');
+}
+
+module.exports = { runPipeline, regenerateDraft, submitArticleUrl, reloadSkills };
