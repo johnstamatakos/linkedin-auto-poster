@@ -4,7 +4,6 @@ import Toast from './components/Toast'
 import Dashboard from './pages/Dashboard'
 import ReviewDrafts from './pages/ReviewDrafts'
 import PostQueue from './pages/PostQueue'
-import PostHistory from './pages/PostHistory'
 import Settings from './pages/Settings'
 const Analytics = lazy(() => import('./pages/Analytics'))
 import { api } from './utils/api'
@@ -52,12 +51,9 @@ export default function App() {
         {currentPage === 'queue' && (
           <PostQueue showToast={showToast} />
         )}
-        {currentPage === 'history' && (
-          <PostHistory showToast={showToast} />
-        )}
         {currentPage === 'analytics' && (
           <Suspense fallback={<div className="empty"><div className="icon">⏳</div>Loading...</div>}>
-            <Analytics />
+            <Analytics showToast={showToast} />
           </Suspense>
         )}
         {currentPage === 'config' && (

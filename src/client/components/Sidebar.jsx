@@ -4,7 +4,6 @@ const NAV_ITEMS = [
   { page: 'dashboard', label: '📊 Dashboard' },
   { page: 'review',    label: '📝 Review Drafts', badgeKey: 'pending' },
   { page: 'queue',     label: '📋 Post Queue',    badgeKey: 'queue', warn: true },
-  { page: 'history',   label: '📤 Post History' },
   { page: 'analytics', label: '📈 Analytics' },
   { page: 'config',    label: '⚙️ Settings' },
 ]
