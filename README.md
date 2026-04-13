@@ -2,7 +2,8 @@
 
 Stay on top of what's moving in tech — without spending hours finding it. This tool surfaces cutting-edge articles and trends that match your work, your opinions, and the direction you think the industry is heading. When something relevant appears, it drafts a post in your voice and queues it for your review. One click to approve, one post to your network.
 
-<img width="1063" height="1277" alt="image" src="https://github.com/user-attachments/assets/3fbaf727-2ec1-49ff-9061-1c7d280002e1" />
+<img width="931" height="786" alt="image" src="https://github.com/user-attachments/assets/2fdb4a3c-deb9-448e-b16e-62ef21f711d7" />
+
 
 ---
 
