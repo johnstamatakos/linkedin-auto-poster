@@ -1,6 +1,7 @@
 # LinkedIn Auto Poster
 
 Crawls technical forums, evaluates articles with Claude, drafts LinkedIn posts in your voice, and publishes one per week after your approval.
+<img width="1063" height="1277" alt="image" src="https://github.com/user-attachments/assets/3fbaf727-2ec1-49ff-9061-1c7d280002e1" />
 
 ---
 
