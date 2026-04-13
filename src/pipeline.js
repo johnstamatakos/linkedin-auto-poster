@@ -1,15 +1,16 @@
 const Anthropic = require('@anthropic-ai/sdk');
-const fs = require('fs');
-const path = require('path');
+const axios     = require('axios');
+const fs        = require('fs');
+const path      = require('path');
 const {
   getPendingArticles, updateArticleEval, markArticleDrafted, insertDraft,
-  getRecentRejectionNotes,
+  getRecentRejectionNotes, getDraftById, updateDraftText,
+  insertArticle, getArticleByUrl,
 } = require('./db');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const SKILLS = path.join(__dirname, '..', 'skills');
 
-// Cache skills at module load — avoids repeated disk reads per article
 const skills = {
   contentEval:  fs.readFileSync(path.join(SKILLS, 'content-eval.md'),  'utf-8'),
   jobContext:   fs.readFileSync(path.join(SKILLS, 'job-context.md'),   'utf-8'),
@@ -60,11 +61,9 @@ Excerpt: ${article.summary || '(none)'}`;
       system,
       messages: [{ role: 'user', content: user }],
     });
-    const raw = msg.content[0].text.trim();
-    // Strip markdown fences
+    const raw      = msg.content[0].text.trim();
     const stripped = raw.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
-    // Extract just the JSON object in case there's extra text around it
-    const match = stripped.match(/\{[\s\S]*\}/);
+    const match    = stripped.match(/\{[\s\S]*\}/);
     if (!match) throw new Error('No JSON object found in response');
     return JSON.parse(match[0]);
   } catch (err) {
@@ -75,7 +74,7 @@ Excerpt: ${article.summary || '(none)'}`;
 
 // ─── Step 2: Draft ────────────────────────────────────────────────────────────
 
-async function draft(article, evalData, config) {
+async function draft(article, evalData, config, guidance = null) {
   const maxChars = config.pipeline?.linkedInPostMaxChars || 2800;
 
   const system = `You are a ghostwriter for John, an Engineering Director at Indeed.
@@ -111,9 +110,10 @@ URL: ${article.url}
 Excerpt: ${article.summary || '(none)'}
 
 Use these insights from the evaluation:
-- Key insight: ${evalData.keyInsight}
-- Application hook: ${evalData.applicationHook}
-- Primary connection to John's work: ${evalData.primaryConnection}`;
+- Key insight: ${evalData.keyInsight || ''}
+- Application hook: ${evalData.applicationHook || ''}
+- Primary connection to John's work: ${evalData.primaryConnection || ''}
+${guidance ? `\nAuthor guidance for this draft: ${guidance}` : ''}`;
 
   try {
     const msg = await client.messages.create({
@@ -129,19 +129,132 @@ Use these insights from the evaluation:
   }
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Regenerate existing draft ────────────────────────────────────────────────
+
+async function regenerateDraft(draftId, guidance, config) {
+  const existing = getDraftById(draftId);
+  if (!existing) throw new Error('Draft not found');
+
+  const article = {
+    title:   existing.article_title   || 'Unknown',
+    source:  existing.article_source  || 'Unknown',
+    url:     existing.article_url     || '',
+    summary: '',
+  };
+
+  const evalData = existing.article_eval_data
+    ? JSON.parse(existing.article_eval_data)
+    : {
+        keyInsight:        existing.key_insight        || '',
+        applicationHook:   '',
+        primaryConnection: existing.primary_connection || '',
+      };
+
+  const postText = await draft(article, evalData, config, guidance || null);
+  if (!postText) throw new Error('Draft generation failed');
+
+  updateDraftText(draftId, postText);
+  return { post_text: postText };
+}
+
+// ─── Submit article by URL ────────────────────────────────────────────────────
+
+async function fetchArticleContent(url) {
+  const { data } = await axios.get(url, {
+    timeout: 15000,
+    headers: { 'User-Agent': 'LinkedInAutoPoster/1.0' },
+    maxContentLength: 2 * 1024 * 1024,
+    responseType: 'text',
+  });
+
+  const titleMatch = data.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const rawTitle   = titleMatch ? titleMatch[1] : '';
+  const title = rawTitle
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&\w+;/g, '')
+    .replace(/\s+/g, ' ').trim() || new URL(url).hostname;
+
+  const source = new URL(url).hostname.replace(/^www\./, '');
+
+  const summary = data
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 600);
+
+  return { title, source, summary };
+}
+
+async function submitArticleUrl(url, config) {
+  console.log(`[pipeline] Manual article submission: ${url}`);
+
+  // Validate URL
+  try { new URL(url); } catch { throw new Error('Invalid URL'); }
+
+  // Fetch content
+  let articleContent;
+  try {
+    articleContent = await fetchArticleContent(url);
+  } catch (err) {
+    throw new Error(`Could not fetch URL: ${err.message}`);
+  }
+
+  // Insert (or skip if duplicate)
+  insertArticle({
+    source:       articleContent.source,
+    source_type:  'manual',
+    url,
+    title:        articleContent.title,
+    summary:      articleContent.summary,
+    published_at: new Date().toISOString(),
+  });
+
+  const article = getArticleByUrl(url);
+  if (!article) throw new Error('Failed to store article');
+
+  // Evaluate
+  const rejectionNotes   = getRecentRejectionNotes(15);
+  const rejectionContext = rejectionNotes.length
+    ? rejectionNotes.map(r => `- "${r.title}" (${r.source}): ${r.rejection_note}`).join('\n')
+    : null;
+
+  const evalData = await evaluate(article, rejectionContext);
+  if (!evalData) throw new Error('Evaluation failed');
+
+  updateArticleEval(article.id, evalData.overallScore, evalData, 'evaluated');
+  console.log(`[pipeline] Manual eval score: ${evalData.overallScore}/10`);
+
+  // Always draft regardless of score — user chose this article intentionally
+  const postText = await draft(article, evalData, config);
+  if (!postText) throw new Error('Draft generation failed');
+
+  insertDraft({
+    article_id:        article.id,
+    post_text:         postText,
+    primary_connection: evalData.primaryConnection || null,
+    key_insight:        evalData.keyInsight        || null,
+    eval_score:         evalData.overallScore,
+  });
+
+  markArticleDrafted(article.id);
+  console.log(`[pipeline] Manual draft created for "${article.title}"`);
+
+  return { score: evalData.overallScore, title: article.title };
+}
+
+// ─── Main pipeline ────────────────────────────────────────────────────────────
 
 async function runPipeline(config) {
-  const minScore = config.pipeline?.minRelevanceScore || 7;
-  const maxDrafts = config.pipeline?.maxDraftsPerRun || 3;
+  const minScore    = config.pipeline?.minRelevanceScore || 7;
+  const maxDrafts   = config.pipeline?.maxDraftsPerRun   || 3;
   const articleLimit = config.pipeline?.articlesPerCrawlRun || 50;
   console.log('[pipeline] Starting...');
 
-  const rejectionNotes = getRecentRejectionNotes(15);
+  const rejectionNotes   = getRecentRejectionNotes(15);
   const rejectionContext = rejectionNotes.length
-    ? rejectionNotes
-        .map((r) => `- "${r.title}" (${r.source}): ${r.rejection_note}`)
-        .join('\n')
+    ? rejectionNotes.map(r => `- "${r.title}" (${r.source}): ${r.rejection_note}`).join('\n')
     : null;
   if (rejectionContext) {
     console.log(`[pipeline] Injecting ${rejectionNotes.length} rejection notes into eval`);
@@ -169,7 +282,7 @@ async function runPipeline(config) {
     }
 
     updateArticleEval(article.id, evalData.overallScore, evalData, 'evaluated');
-    await new Promise((r) => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 1000));
 
     console.log(`[pipeline] Drafting for "${article.title}" (score ${evalData.overallScore})`);
     const postText = await draft(article, evalData, config);
@@ -180,21 +293,21 @@ async function runPipeline(config) {
     }
 
     insertDraft({
-      article_id: article.id,
-      post_text: postText,
+      article_id:         article.id,
+      post_text:          postText,
       primary_connection: evalData.primaryConnection || null,
-      key_insight: evalData.keyInsight || null,
-      eval_score: evalData.overallScore,
+      key_insight:        evalData.keyInsight        || null,
+      eval_score:         evalData.overallScore,
     });
 
     markArticleDrafted(article.id);
     created++;
     console.log(`[pipeline] Draft created for "${article.title}"`);
-    await new Promise((r) => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 2000));
   }
 
   console.log(`[pipeline] Done. ${created} drafts created.`);
   return { draftsCreated: created };
 }
 
-module.exports = { runPipeline };
+module.exports = { runPipeline, regenerateDraft, submitArticleUrl };

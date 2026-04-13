@@ -5,7 +5,8 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js",
+    "dev": "concurrently \"node --watch src/server.js\" \"vite\" --names \"server,client\" --prefix-colors \"cyan,magenta\"",
+    "build": "vite build",
     "reset-db": "node scripts/reset-db.js",
     "clear-drafts": "node scripts/clear-drafts.js",
     "clear-articles": "node scripts/clear-articles.js",
@@ -14,15 +15,22 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
     "axios": "^1.7.2",
+    "better-sqlite3": "^9.6.0",
+    "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-session": "^1.18.0",
     "node-cron": "^3.0.3",
-    "dotenv": "^16.4.5",
-    "rss-parser": "^3.13.0",
-    "better-sqlite3": "^9.6.0"
+    "recharts": "^3.8.1",
+    "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^8.2.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vite": "^5.4.2"
   },
   "engines": {
     "node": ">=18.0.0"
   }
 }
-

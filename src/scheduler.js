@@ -101,7 +101,7 @@ function start(appConfig) {
   config = appConfig;
   const crawlCron     = config.schedule?.crawlCron     || '0 8 * * 1,3,5';
   const postCron      = config.schedule?.postCron      || '0 9 * * 2';
-  const analyticsCron = config.schedule?.analyticsCron || '0 10 * * *';
+  const analyticsCron = config.schedule?.analyticsCron  || '0 10 * * *';
   const tz            = config.schedule?.timezone      || 'America/New_York';
 
   if (cron.validate(crawlCron)) {

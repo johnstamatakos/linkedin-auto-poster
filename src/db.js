@@ -173,6 +173,10 @@ function getRecentRejectionNotes(limit = 15) {
   `).all(limit);
 }
 
+function getArticleByUrl(url) {
+  return db.prepare(`SELECT * FROM articles WHERE url = ?`).get(url);
+}
+
 function updateDraftText(id, text) {
   db.prepare(`UPDATE drafts SET post_text=?, edited=1 WHERE id=?`).run(text, id);
 }
@@ -215,6 +219,38 @@ function getRecentPosts(limit = 20) {
   `).all(limit);
 }
 
+// ─── Analytics ────────────────────────────────────────────────────────────────
+
+function getSourceStats() {
+  return db.prepare(`
+    SELECT
+      a.source,
+      COUNT(DISTINCT a.id)                                                   AS articles,
+      COUNT(DISTINCT d.id)                                                   AS drafts,
+      SUM(CASE WHEN d.status = 'approved'      THEN 1 ELSE 0 END)           AS approved,
+      SUM(CASE WHEN d.status = 'rejected'      THEN 1 ELSE 0 END)           AS rejected,
+      SUM(CASE WHEN d.status = 'posted'        THEN 1 ELSE 0 END)           AS published
+    FROM articles a
+    LEFT JOIN drafts d ON d.article_id = a.id
+    GROUP BY a.source
+    ORDER BY articles DESC
+  `).all();
+}
+
+function getEngagementTrends() {
+  return db.prepare(`
+    SELECT
+      strftime('%Y-%m-%d', p.posted_at) AS date,
+      p.impressions,
+      p.reactions,
+      p.comments
+    FROM posts p
+    WHERE p.impressions IS NOT NULL
+      AND p.status = 'posted'
+    ORDER BY p.posted_at ASC
+  `).all();
+}
+
 // ─── Settings ─────────────────────────────────────────────────────────────────
 
 function getSetting(key, def = null) {
@@ -239,11 +275,12 @@ function getStats() {
 }
 
 module.exports = {
-  insertArticle, getPendingArticles, updateArticleEval, markArticleDrafted,
+  insertArticle, getPendingArticles, updateArticleEval, markArticleDrafted, getArticleByUrl,
   insertDraft, getDraftsByStatus, getApprovedQueue, getDraftById,
   approveDraft, rejectDraft, getRecentRejectionNotes, updateDraftText, reorderQueue,
   getNextApprovedPost, markDraftPosted,
   insertPost, getRecentPosts,
   updatePostAnalytics, getPostsPendingAnalytics,
   getSetting, setSetting, getStats,
+  getSourceStats, getEngagementTrends,
 };

@@ -6,8 +6,10 @@ const fs       = require('fs');
 const crypto   = require('crypto');
 
 const db = require('./db');
+const { getSourceStats, getEngagementTrends } = db;
 const { getAuthUrl, exchangeCode, getAuthStatus } = require('./linkedin');
 const scheduler = require('./scheduler');
+const { regenerateDraft, submitArticleUrl } = require('./pipeline');
 
 // ─── Config helpers ───────────────────────────────────────────────────────────
 
@@ -118,6 +120,15 @@ app.post('/api/drafts/:id/reject', requireLogin, (req, res) => {
   res.json({ ok: true });
 });
 
+app.post('/api/drafts/:id/regenerate', requireLogin, async (req, res) => {
+  try {
+    const result = await regenerateDraft(Number(req.params.id), req.body.guidance || '', loadConfig());
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.put('/api/drafts/:id', requireLogin, (req, res) => {
   if (!req.body.post_text) return res.status(400).json({ error: 'post_text required' });
   db.updateDraftText(Number(req.params.id), req.body.post_text);
@@ -154,11 +165,31 @@ app.post('/api/run/post', requireLogin, async (req, res) => {
   }
 });
 
+app.post('/api/run/article', requireLogin, async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ error: 'url required' });
+  try {
+    const result = await submitArticleUrl(url, loadConfig());
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/run/analytics', requireLogin, (req, res) => {
   res.json({ ok: true, message: 'Analytics sync started in background' });
   scheduler.runAnalyticsSync().catch((err) =>
     console.error('[server] Manual analytics sync error:', err.message)
   );
+});
+
+// ─── Analytics ────────────────────────────────────────────────────────────────
+
+app.get('/api/analytics', requireLogin, (req, res) => {
+  res.json({
+    sources: db.getSourceStats(),
+    trends:  db.getEngagementTrends(),
+  });
 });
 
 // ─── Config ───────────────────────────────────────────────────────────────────
