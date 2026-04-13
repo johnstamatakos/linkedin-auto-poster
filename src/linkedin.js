@@ -12,7 +12,7 @@ function getAuthUrl(state) {
     client_id:     process.env.LINKEDIN_CLIENT_ID,
     redirect_uri:  process.env.LINKEDIN_REDIRECT_URI,
     state,
-    scope: 'openid profile w_member_social',
+    scope: 'openid profile w_member_social r_member_social',
   });
 }
 
@@ -122,6 +122,56 @@ async function postToLinkedIn(text) {
   return headers['x-restli-id'] || 'unknown';
 }
 
+// ─── Analytics ────────────────────────────────────────────────────────────────
+
+async function fetchPostAnalytics(linkedInPostId) {
+  if (!linkedInPostId || linkedInPostId === 'unknown') {
+    return { impressions: null, reactions: null, comments: null };
+  }
+
+  const token   = await getToken();
+  const encoded = encodeURIComponent(linkedInPostId);
+
+  let reactions   = null;
+  let comments    = null;
+  let impressions = null;
+
+  // Social actions gives us reactions (likes) and comments counts
+  try {
+    const { data } = await axios.get(`${API_V2}/socialActions/${encoded}`, {
+      headers: {
+        Authorization:               `Bearer ${token}`,
+        'X-Restli-Protocol-Version': '2.0.0',
+      },
+      params:  { fields: 'likesSummary,commentsSummary' },
+      timeout: 10000,
+    });
+    reactions = data.likesSummary?.totalLikes         ?? null;
+    comments  = data.commentsSummary?.totalFirstLevelComments ?? null;
+  } catch (err) {
+    console.warn('[linkedin] socialActions fetch failed:', err.response?.status, err.response?.data?.message || err.message);
+  }
+
+  // ugcPosts statistics may provide impressions (numViews) and a fallback for
+  // reactions/comments if socialActions wasn't available.
+  try {
+    const { data } = await axios.get(`${API_V2}/ugcPosts/${encoded}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      params:  { fields: 'statistics' },
+      timeout: 10000,
+    });
+    if (data.statistics) {
+      impressions              = data.statistics.numViews    ?? null;
+      if (reactions === null) reactions  = data.statistics.numLikes    ?? null;
+      if (comments  === null) comments   = data.statistics.numComments ?? null;
+    }
+  } catch (err) {
+    console.warn('[linkedin] ugcPosts statistics fetch failed:', err.response?.status, err.response?.data?.message || err.message);
+  }
+
+  return { impressions, reactions, comments };
+}
+
 // ─── Status ───────────────────────────────────────────────────────────────────
 
 function getAuthStatus() {
@@ -138,4 +188,4 @@ function getAuthStatus() {
   };
 }
 
-module.exports = { getAuthUrl, exchangeCode, postToLinkedIn, getAuthStatus };
+module.exports = { getAuthUrl, exchangeCode, postToLinkedIn, getAuthStatus, fetchPostAnalytics };

@@ -154,6 +154,13 @@ app.post('/api/run/post', requireLogin, async (req, res) => {
   }
 });
 
+app.post('/api/run/analytics', requireLogin, (req, res) => {
+  res.json({ ok: true, message: 'Analytics sync started in background' });
+  scheduler.runAnalyticsSync().catch((err) =>
+    console.error('[server] Manual analytics sync error:', err.message)
+  );
+});
+
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 app.get('/api/config', requireLogin, (req, res) => res.json(loadConfig()));

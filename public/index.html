@@ -106,6 +106,14 @@
     .empty{text-align:center;padding:48px 20px;color:var(--muted);font-size:14px}
     .empty .icon{font-size:40px;margin-bottom:12px}
 
+    /* Analytics row */
+    .analytics-row{display:flex;gap:20px;padding:10px 14px;background:var(--surface2);border-radius:6px;border:1px solid var(--border);margin-top:12px;font-size:12px}
+    .analytics-metric{display:flex;align-items:center;gap:5px;color:var(--text)}
+    .analytics-metric .icon{font-size:14px}
+    .analytics-metric .val{font-weight:600}
+    .analytics-metric .lbl{color:var(--muted)}
+    .analytics-pending{font-size:11px;color:var(--muted);margin-top:10px;font-style:italic}
+
     /* Toast */
     .toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:1000;opacity:0;transition:opacity .3s;pointer-events:none}
     .toast.show{opacity:1}
@@ -383,10 +391,16 @@ async function removeFromQueue(id) {
 
 // ─── History ──────────────────────────────────────────────────────────────────
 async function renderHistory(m) {
-  m.innerHTML = `<div class="page-header"><div><div class="page-title">Post History</div><div class="page-sub">Posts published to LinkedIn</div></div></div>`;
+  m.innerHTML = `
+    <div class="page-header">
+      <div><div class="page-title">Post History</div><div class="page-sub">Posts published to LinkedIn</div></div>
+      <button class="btn btn-ghost" onclick="syncAnalytics(this)">Sync Analytics</button>
+    </div>
+    <div id="hv"></div>`;
   const posts = await api('/api/posts/recent');
-  if (!posts.length) { m.innerHTML += `<div class="empty"><div class="icon">📤</div>No posts published yet.</div>`; return; }
-  m.innerHTML += posts.map(p => `
+  const el = document.getElementById('hv');
+  if (!posts.length) { el.innerHTML = `<div class="empty"><div class="icon">📤</div>No posts published yet.</div>`; return; }
+  el.innerHTML = posts.map(p => `
     <div class="card">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px">
         <span style="color:var(--muted)">${fmtDate(p.posted_at)}</span>
@@ -394,8 +408,48 @@ async function renderHistory(m) {
       </div>
       ${p.article_title ? `<div style="font-size:12px;color:var(--muted);margin-bottom:8px">${esc(p.article_title)}</div>` : ''}
       <div class="post-view" style="font-size:13px">${esc(p.post_text)}</div>
-      ${p.linkedin_post_id ? `<div style="font-size:11px;color:var(--muted);margin-top:6px">LinkedIn ID: ${esc(p.linkedin_post_id)}</div>` : ''}
+      ${analyticsHtml(p)}
     </div>`).join('');
+}
+
+function analyticsHtml(p) {
+  const hoursOld = (Date.now() - new Date(p.posted_at).getTime()) / 3600000;
+
+  if (p.analytics_fetched_at) {
+    // We have a fetch attempt — show whatever data we got
+    const hasAny = p.impressions != null || p.reactions != null || p.comments != null;
+    if (!hasAny) {
+      return `<div class="analytics-pending">Analytics unavailable for this post (LinkedIn API access may require re-authorization with r_member_social scope)</div>`;
+    }
+    return `
+      <div class="analytics-row">
+        <div class="analytics-metric"><span class="icon">👁</span><span class="val">${fmtNum(p.impressions)}</span><span class="lbl">impressions</span></div>
+        <div class="analytics-metric"><span class="icon">❤️</span><span class="val">${fmtNum(p.reactions)}</span><span class="lbl">reactions</span></div>
+        <div class="analytics-metric"><span class="icon">💬</span><span class="val">${fmtNum(p.comments)}</span><span class="lbl">comments</span></div>
+        <span style="margin-left:auto;color:var(--muted);font-size:11px;align-self:center">Updated ${fmtDate(p.analytics_fetched_at)}</span>
+      </div>`;
+  }
+
+  if (hoursOld < 48) {
+    return `<div class="analytics-pending">Analytics available ~${Math.ceil(48 - hoursOld)}h from now (LinkedIn data has a 24–48h lag)</div>`;
+  }
+
+  return `<div class="analytics-pending">Analytics pending — click "Sync Analytics" to fetch</div>`;
+}
+
+function fmtNum(n) {
+  if (n == null) return '—';
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000)    return (n / 1000).toFixed(1) + 'k';
+  return String(n);
+}
+
+async function syncAnalytics(btn) {
+  btn.disabled = true;
+  btn.textContent = 'Syncing...';
+  await api('/api/run/analytics', 'POST');
+  toast('Analytics sync started — refresh in a moment', 'success');
+  setTimeout(() => renderHistory(document.getElementById('main')), 3000);
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────

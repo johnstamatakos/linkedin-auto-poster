@@ -50,7 +50,7 @@ async function crawlHN(config) {
 // ─── Reddit ───────────────────────────────────────────────────────────────────
 
 async function crawlReddit(config) {
-  const { subreddits = [], maxAgeHours = 72 } = config.sources.reddit;
+  const { subreddits = [], maxAgeHours = 72, minScore = 50 } = config.sources.reddit;
   const cutoffUnix = (Date.now() - maxAgeHours * 3600 * 1000) / 1000;
   const articles = [];
   const headers = { 'User-Agent': 'LinkedInAutoPoster/1.0' };
@@ -91,7 +91,7 @@ async function crawlReddit(config) {
 
       for (const post of data?.data?.children || []) {
         const p = post.data;
-        if (!p.url || p.is_self || p.created_utc < cutoffUnix || p.score < 50) continue;
+        if (!p.url || p.is_self || p.created_utc < cutoffUnix || p.score < minScore) continue;
         articles.push({
           source: `r/${sub}`,
           source_type: 'reddit',

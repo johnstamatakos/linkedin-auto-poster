@@ -61,6 +61,14 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_drafts_queue    ON drafts(queue_position);
 `);
 
+// ─── Migrations ───────────────────────────────────────────────────────────────
+
+const postCols = new Set(db.prepare('PRAGMA table_info(posts)').all().map(c => c.name));
+if (!postCols.has('impressions'))          db.exec('ALTER TABLE posts ADD COLUMN impressions INTEGER');
+if (!postCols.has('reactions'))            db.exec('ALTER TABLE posts ADD COLUMN reactions INTEGER');
+if (!postCols.has('comments'))             db.exec('ALTER TABLE posts ADD COLUMN comments INTEGER');
+if (!postCols.has('analytics_fetched_at')) db.exec('ALTER TABLE posts ADD COLUMN analytics_fetched_at TEXT');
+
 // ─── Articles ─────────────────────────────────────────────────────────────────
 
 function insertArticle(a) {
@@ -134,6 +142,37 @@ function rejectDraft(id, note) {
   `).run(note || null, id);
 }
 
+function updatePostAnalytics(id, { impressions, reactions, comments }) {
+  db.prepare(`
+    UPDATE posts
+    SET impressions=?, reactions=?, comments=?, analytics_fetched_at=datetime('now')
+    WHERE id=?
+  `).run(impressions ?? null, reactions ?? null, comments ?? null, id);
+}
+
+function getPostsPendingAnalytics() {
+  return db.prepare(`
+    SELECT * FROM posts
+    WHERE status = 'posted'
+      AND linkedin_post_id IS NOT NULL
+      AND analytics_fetched_at IS NULL
+      AND posted_at < datetime('now', '-48 hours')
+  `).all();
+}
+
+function getRecentRejectionNotes(limit = 15) {
+  return db.prepare(`
+    SELECT d.rejection_note, a.title, a.source
+    FROM drafts d
+    LEFT JOIN articles a ON d.article_id = a.id
+    WHERE d.status = 'rejected'
+      AND d.rejection_note IS NOT NULL
+      AND trim(d.rejection_note) != ''
+    ORDER BY d.rejected_at DESC
+    LIMIT ?
+  `).all(limit);
+}
+
 function updateDraftText(id, text) {
   db.prepare(`UPDATE drafts SET post_text=?, edited=1 WHERE id=?`).run(text, id);
 }
@@ -202,8 +241,9 @@ function getStats() {
 module.exports = {
   insertArticle, getPendingArticles, updateArticleEval, markArticleDrafted,
   insertDraft, getDraftsByStatus, getApprovedQueue, getDraftById,
-  approveDraft, rejectDraft, updateDraftText, reorderQueue,
+  approveDraft, rejectDraft, getRecentRejectionNotes, updateDraftText, reorderQueue,
   getNextApprovedPost, markDraftPosted,
   insertPost, getRecentPosts,
+  updatePostAnalytics, getPostsPendingAnalytics,
   getSetting, setSetting, getStats,
 };
