@@ -10,7 +10,7 @@ Stay on top of what's moving in tech — without spending hours finding it. This
 
 The hardest part of staying active on LinkedIn isn't writing — it's finding the right things to write about. Scanning Hacker News, keeping up with research blogs, and filtering out noise takes real time. By the time something interesting surfaces, the moment to share it has often passed.
 
-This tool handles discovery and drafting. You tell it what you work on, what you believe about where the industry is going, and what sources you trust. It monitors those sources, scores each article against your context, and drafts a post only when something is genuinely worth sharing. The result lands in a review queue where you can approve, edit, or skip it in under a minute.
+This tool handles discovery and drafting. You tell it what you work on, what sources you trust, and — critically — what you actually believe about where the industry is heading. Those opinions get encoded as "Points of View" in your configuration and become first-class signals in the evaluation step. An article that validates or challenges one of your convictions scores higher than one that's just topically adjacent to your work. When a draft is written, it leads with your point of view rather than summarizing the article. It monitors those sources, scores each article against your context, and drafts a post only when something is genuinely worth sharing. The result lands in a review queue where you can approve, edit, or skip it in under a minute.
 
 The goal is to lower the overhead of sharing your perspective — so that when something relevant breaks in AI infrastructure, distributed systems, developer tooling, or wherever your domain sits, you can put a point of view on it and reach your network before the conversation moves on.
 
@@ -93,7 +93,7 @@ Your real skill files are gitignored — personal details stay out of version co
 | File | Controls |
 |---|---|
 | `writing-style.md` | Tone, format rules, structure, and example sentences in your voice |
-| `job-context.md` | Your role, products, and the industry opinions that make content feel relevant to you specifically |
+| `job-context.md` | Your role, products, and a "Points of View" section where you write out your convictions about the industry — these act as relevance multipliers and shape how every draft is framed |
 | `content-eval.md` | Scoring weights, high-relevance signals, and what to always skip |
 
 **Tuning tips:**

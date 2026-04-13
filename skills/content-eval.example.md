@@ -1,45 +1,60 @@
 # Content Evaluation Skill
 
 ## Purpose
-Score articles before spending tokens on drafting. Only relevant, specific,
-timely articles should produce drafts.
+Score articles before spending tokens on drafting. Only high-quality, relevant,
+specific articles should produce drafts.
 
 ## Scoring Dimensions (each 1-10)
 
-### Relevance
-Does this connect to one or more of the author's active work areas?
-Score 7+ passes to drafting.
+### Relevance (weight: 50%)
+Primary filter. Does this connect to one or more of the author's work areas?
 
 High-relevance signals:
-- [List topic areas that are highly relevant to your work]
-- [List types of content that tend to be useful]
+- [Your primary technical domain, e.g. distributed systems, AI infrastructure, developer tooling]
+- [Your secondary domain, e.g. platform architecture, API design]
+- [Leadership topics you post on, if any, e.g. engineering org design, hiring, performance]
+- [Industry segments relevant to your work, e.g. fintech, marketplace, enterprise SaaS]
 
-Low-relevance signals:
-- [List topics that are never relevant, e.g. crypto, frontend CSS]
-- [List content types to skip, e.g. pure marketing, listicles]
+**Opinion match (also counts as high relevance):**
+An article passes if it provides a strong launching pad for any opinion in
+the Points of View section of your writing-style skill, even if the topic
+area is not explicitly listed above. Ask: could this article prompt a genuine
+reaction based on what the author actually believes? If yes, treat it as
+relevant regardless of subject matter.
 
-### Timeliness
+Low-relevance signals (skip these):
+- Pure research papers without practical product engineering application
+- [Domains entirely outside your work, e.g. blockchain/web3, frontend CSS]
+- General career advice or motivational content
+- Marketing pieces without technical substance
+- [Any specific content types you want to exclude]
+
+### Timeliness (weight: 20%)
 - Within last week: 10
 - Within last month: 7
 - Within last quarter: 4
 - Older: 2
 
-### Specificity
-Does the article have concrete findings, techniques, or numbers?
-Vague think-pieces score low.
+### Specificity (weight: 15%)
+Does the article have concrete findings, techniques, or numbers? Vague
+think-pieces and listicles score low. Technical depth and empirical findings
+score high. For leadership content, general advice scores low — specific
+frameworks, data, or hard-won lessons score high.
 
-### Post Potential
+### Post Potential (weight: 15%)
 Can this become a short LinkedIn post with a genuine insight, a clear
-application to the author's work, and a natural close?
+connection to the author's work, and a natural close? Articles that are too
+narrow, too broad, entirely behind a paywall, or meaningful only to a niche
+academic audience score low.
 
 ## Scoring Formula
-overallScore = (relevance × 0.4) + (timeliness × 0.2) + (specificity × 0.2) + (postPotential × 0.2)
+overallScore = (relevance × 0.5) + (timeliness × 0.2) + (specificity × 0.15) + (postPotential × 0.15)
 
 Round to one decimal place.
 
 ## Output Format
 
-Return ONLY a valid JSON object. No markdown, no explanation, no preamble.
+Return ONLY a valid JSON object. No markdown fences, no explanation, no preamble.
 
 {
   "relevanceScore": 8,
@@ -47,9 +62,11 @@ Return ONLY a valid JSON object. No markdown, no explanation, no preamble.
   "specificityScore": 7,
   "postPotentialScore": 8,
   "overallScore": 8.0,
-  "primaryConnection": "Brief description of which product/initiative this connects to",
-  "keyInsight": "One sentence: the core takeaway that would anchor a LinkedIn post.",
-  "applicationHook": "One sentence: how this connects to the author's specific work.",
+  "primaryConnection": "Brief description of which work area or experience this connects to",
+  "keyInsight": "One sentence: the core technical or leadership takeaway that would anchor a LinkedIn post.",
+  "applicationHook": "One sentence: how this connects to the author's specific work or experience.",
   "pass": true,
   "skipReason": null
 }
+
+If pass is false, populate skipReason with a brief explanation.
