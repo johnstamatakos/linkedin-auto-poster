@@ -141,6 +141,70 @@ async function crawlRSS(config) {
   return dedupe(articles);
 }
 
+// ─── Source Health Check ──────────────────────────────────────────────────────
+
+function cleanError(err) {
+  if (err.code === 'ECONNABORTED') return 'Timeout';
+  if (err.code === 'ENOTFOUND')    return 'Host not found';
+  if (err.response?.status)        return `HTTP ${err.response.status}`;
+  return err.message.split('\n')[0].slice(0, 80);
+}
+
+async function checkHN(hnConfig) {
+  const query = hnConfig?.queries?.[0] || 'programming';
+  const t0 = Date.now();
+  try {
+    await axios.get('https://hn.algolia.com/api/v1/search', {
+      params: { query, tags: 'story', hitsPerPage: 1 },
+      timeout: 8000,
+    });
+    return { ok: true, latency: Date.now() - t0 };
+  } catch (err) {
+    return { ok: false, error: cleanError(err), latency: Date.now() - t0 };
+  }
+}
+
+async function checkReddit(redditConfig) {
+  const sub = redditConfig?.subreddits?.[0] || 'programming';
+  const t0 = Date.now();
+  try {
+    await axios.get(`https://www.reddit.com/r/${sub}/top.json`, {
+      params: { t: 'week', limit: 1 },
+      headers: { 'User-Agent': 'LinkedInAutoPoster/1.0' },
+      timeout: 8000,
+    });
+    return { ok: true, latency: Date.now() - t0 };
+  } catch (err) {
+    return { ok: false, error: cleanError(err), latency: Date.now() - t0 };
+  }
+}
+
+async function checkRSSFeeds(rssConfig) {
+  const feeds = rssConfig?.feeds || [];
+  return Promise.all(feeds.map(async (feed) => {
+    const t0 = Date.now();
+    try {
+      await rss.parseURL(feed.url);
+      return { name: feed.name, url: feed.url, ok: true, latency: Date.now() - t0 };
+    } catch (err) {
+      return { name: feed.name, url: feed.url, ok: false, error: cleanError(err), latency: Date.now() - t0 };
+    }
+  }));
+}
+
+async function checkSourceHealth(config) {
+  const [hn, reddit, rssResult] = await Promise.all([
+    config.sources?.hackernews?.enabled ? checkHN(config.sources.hackernews)       : null,
+    config.sources?.reddit?.enabled     ? checkReddit(config.sources.reddit)       : null,
+    config.sources?.rss?.enabled        ? checkRSSFeeds(config.sources.rss)        : null,
+  ]);
+  const result = {};
+  if (hn)        result.hackernews = hn;
+  if (reddit)    result.reddit     = reddit;
+  if (rssResult) result.rss        = rssResult;
+  return result;
+}
+
 // ─── Utils ────────────────────────────────────────────────────────────────────
 
 function dedupe(arr) {
@@ -186,4 +250,4 @@ async function runCrawl(config) {
   return { inserted, skipped };
 }
 
-module.exports = { runCrawl };
+module.exports = { runCrawl, checkSourceHealth };

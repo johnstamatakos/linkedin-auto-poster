@@ -34,9 +34,21 @@ function TagList({ tags, onRemove, onAdd, placeholder }) {
   )
 }
 
-function FeedList({ feeds, onRemove, onAdd }) {
+function HealthDot({ status }) {
+  if (!status) return null
+  return (
+    <span
+      className={`dot ${status.ok ? 'dot-green' : 'dot-red'}`}
+      title={status.ok ? `${status.latency}ms` : status.error}
+      style={{ marginLeft: 8, verticalAlign: 'middle' }}
+    />
+  )
+}
+
+function FeedList({ feeds, onRemove, onAdd, health }) {
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
+  const healthMap = Object.fromEntries((health || []).map(h => [h.url, h]))
 
   function addFeed() {
     if (!name.trim() || !url.trim()) return
@@ -52,6 +64,13 @@ function FeedList({ feeds, onRemove, onAdd }) {
           <div className="feed-info">
             <span className="feed-name">{f.name}</span>
             <span className="feed-url">{f.url}</span>
+            {healthMap[f.url] && (
+              <span
+                className={`dot ${healthMap[f.url].ok ? 'dot-green' : 'dot-red'}`}
+                title={healthMap[f.url].ok ? `${healthMap[f.url].latency}ms` : healthMap[f.url].error}
+                style={{ marginLeft: 6, flexShrink: 0 }}
+              />
+            )}
           </div>
           <button className="feed-remove" onClick={() => onRemove(i)}>×</button>
         </div>
@@ -86,6 +105,8 @@ export default function Settings({ showToast }) {
   const [timezone, setTimezone] = useState('')
   const [minScore, setMinScore] = useState(7)
   const [maxDrafts, setMaxDrafts] = useState(3)
+  const [sourceHealth, setSourceHealth] = useState(null)
+  const [checkingHealth, setCheckingHealth] = useState(false)
 
   useEffect(() => {
     Promise.all([api('/api/config'), api('/api/dashboard')]).then(([cfg, dash]) => {
@@ -102,6 +123,25 @@ export default function Settings({ showToast }) {
       setMaxDrafts(cfg.pipeline?.maxDraftsPerRun ?? 3)
     })
   }, [])
+
+  async function checkSources() {
+    setCheckingHealth(true)
+    try {
+      const h = await api('/api/sources/health')
+      setSourceHealth(h)
+      const broken = [
+        h.hackernews && !h.hackernews.ok ? 'HN' : null,
+        h.reddit     && !h.reddit.ok     ? 'Reddit' : null,
+        ...(h.rss || []).filter(f => !f.ok).map(f => f.name),
+      ].filter(Boolean)
+      if (broken.length) showToast(`Broken: ${broken.join(', ')}`, 'error')
+      else showToast('All sources OK', 'success')
+    } catch (err) {
+      showToast(`Health check failed: ${err.message}`, 'error')
+    } finally {
+      setCheckingHealth(false)
+    }
+  }
 
   async function saveConfig() {
     const updated = {
@@ -131,11 +171,19 @@ export default function Settings({ showToast }) {
           <div className="page-title">Settings</div>
           <div className="page-sub">Sources, schedule, and pipeline</div>
         </div>
-        <button className="btn btn-primary" onClick={saveConfig}>Save Settings</button>
+        <div className="btn-row">
+          <button className="btn btn-ghost" onClick={checkSources} disabled={checkingHealth}>
+            {checkingHealth ? 'Checking...' : 'Check Sources'}
+          </button>
+          <button className="btn btn-primary" onClick={saveConfig}>Save Settings</button>
+        </div>
       </div>
 
       <div className="card">
-        <div className="section-title">HN Search Queries</div>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div className="section-title">HN Search Queries</div>
+          <HealthDot status={sourceHealth?.hackernews} />
+        </div>
         <div className="section-sub">Terms used to search Hacker News on each crawl run.</div>
         <TagList
           tags={hnQueries}
@@ -146,7 +194,10 @@ export default function Settings({ showToast }) {
       </div>
 
       <div className="card">
-        <div className="section-title">Reddit Subreddits</div>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div className="section-title">Reddit Subreddits</div>
+          <HealthDot status={sourceHealth?.reddit} />
+        </div>
         <div className="section-sub">Subreddits crawled for relevant posts.</div>
         <TagList
           tags={subreddits}
@@ -163,6 +214,7 @@ export default function Settings({ showToast }) {
           feeds={feeds}
           onRemove={i => setFeeds(prev => prev.filter((_, j) => j !== i))}
           onAdd={feed => setFeeds(prev => [...prev, feed])}
+          health={sourceHealth?.rss}
         />
       </div>
 

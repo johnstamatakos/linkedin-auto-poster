@@ -49,7 +49,13 @@ export default function Dashboard({ onNavigate, showToast, updateBadges }) {
     )
   }
 
-  const { stats, linkedInStatus: li, config } = data
+  const { stats, linkedInStatus: li, config, sourceHealth } = data
+
+  const brokenSources = sourceHealth ? [
+    sourceHealth.hackernews && !sourceHealth.hackernews.ok ? `HN (${sourceHealth.hackernews.error})` : null,
+    sourceHealth.reddit     && !sourceHealth.reddit.ok     ? `Reddit (${sourceHealth.reddit.error})` : null,
+    ...(sourceHealth.rss || []).filter(f => !f.ok).map(f => `${f.name} (${f.error})`),
+  ].filter(Boolean) : []
 
   return (
     <>
@@ -70,6 +76,17 @@ export default function Dashboard({ onNavigate, showToast, updateBadges }) {
           <><span className="dot dot-red" /> LinkedIn not connected — <a href="/auth/linkedin" style={{ color: 'var(--accent)' }}>Connect now</a></>
         )}
       </div>
+
+      {brokenSources.length > 0 && (
+        <div className="li-bar" style={{ borderColor: '#f87171', color: '#f87171' }}>
+          <span className="dot dot-red" /> Source issues detected: {brokenSources.join(' · ')}
+          {sourceHealth?.checkedAt && (
+            <span style={{ marginLeft: 8, opacity: 0.6, fontSize: 11 }}>
+              (checked {new Date(sourceHealth.checkedAt).toLocaleTimeString()})
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="stat-grid">
         <div className="stat">

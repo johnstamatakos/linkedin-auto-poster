@@ -10,6 +10,7 @@ const { getSourceStats, getEngagementTrends } = db;
 const { getAuthUrl, exchangeCode, getAuthStatus } = require('./linkedin');
 const scheduler = require('./scheduler');
 const { regenerateDraft, submitArticleUrl, reloadSkills } = require('./pipeline');
+const { checkSourceHealth } = require('./crawler');
 const { streamCalibration, appendPointOfView } = require('./calibrate');
 
 // ─── Config helpers ───────────────────────────────────────────────────────────
@@ -89,10 +90,14 @@ app.get('/auth/linkedin/callback', requireLogin, async (req, res) => {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 app.get('/api/dashboard', requireLogin, (req, res) => {
+  const healthRaw = db.getSetting('source_health');
   res.json({
     stats:          db.getStats(),
     linkedInStatus: getAuthStatus(),
     config:         loadConfig(),
+    sourceHealth:   healthRaw
+      ? { ...JSON.parse(healthRaw), checkedAt: db.getSetting('source_health_checked_at') }
+      : null,
   });
 });
 
@@ -150,6 +155,17 @@ app.get('/api/posts/recent', requireLogin, (req, res) =>
 );
 
 // ─── Manual triggers ──────────────────────────────────────────────────────────
+
+app.get('/api/sources/health', requireLogin, async (req, res) => {
+  try {
+    const results = await checkSourceHealth(loadConfig());
+    db.setSetting('source_health', JSON.stringify(results));
+    db.setSetting('source_health_checked_at', new Date().toISOString());
+    res.json({ ...results, checkedAt: new Date().toISOString() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.post('/api/run/crawl', requireLogin, (req, res) => {
   res.json({ ok: true, message: 'Crawl started in background' });

@@ -1,9 +1,9 @@
 const cron = require('node-cron');
-const { runCrawl }       = require('./crawler');
+const { runCrawl, checkSourceHealth } = require('./crawler');
 const { runPipeline }    = require('./pipeline');
 const { postToLinkedIn, getAuthStatus, fetchPostAnalytics } = require('./linkedin');
 const { getNextApprovedPost, markDraftPosted, insertPost,
-        getPostsPendingAnalytics, updatePostAnalytics } = require('./db');
+        getPostsPendingAnalytics, updatePostAnalytics, setSetting } = require('./db');
 
 let config       = null;
 let crawlJob     = null;
@@ -93,6 +93,17 @@ async function runAnalyticsSync() {
 async function runCrawlAndPipeline() {
   console.log('[scheduler] Crawl + pipeline starting...');
   try {
+    const health = await checkSourceHealth(config);
+    setSetting('source_health', JSON.stringify(health));
+    setSetting('source_health_checked_at', new Date().toISOString());
+
+    const broken = [
+      health.hackernews && !health.hackernews.ok ? `HN: ${health.hackernews.error}` : null,
+      health.reddit     && !health.reddit.ok     ? `Reddit: ${health.reddit.error}` : null,
+      ...(health.rss || []).filter(f => !f.ok).map(f => `RSS "${f.name}": ${f.error}`),
+    ].filter(Boolean);
+    if (broken.length) console.warn('[scheduler] Broken sources:', broken.join(' | '));
+
     const crawlResult    = await runCrawl(config);
     const pipelineResult = await runPipeline(config);
     console.log('[scheduler] Complete:', { crawlResult, pipelineResult });
