@@ -152,7 +152,7 @@ function SkillCard({ name, label, icon, description, content, onSaved, showToast
       {expanded && mode === 'idle' && (
         <div className="skill-card-body">
           {isConfigured
-            ? <div className="skill-preview">{content.split('\n').slice(0, 5).join('\n')}</div>
+            ? <div className="skill-preview">{content}</div>
             : <div className="skill-not-configured">Not configured — click "Calibrate with AI" to get started.</div>
           }
         </div>
@@ -163,21 +163,33 @@ function SkillCard({ name, label, icon, description, content, onSaved, showToast
         <div className="skill-card-body">
           <div className="interview-msgs">
             {displayMessages.length === 0 && streaming && (
-              <div className="imsg imsg-assistant imsg-streaming">
-                <span className="stream-cursor" />
+              <div className="imsg-wrap imsg-wrap-assistant">
+                <span className="imsg-sender">Claude</span>
+                <div className="imsg imsg-assistant imsg-streaming">
+                  <span className="stream-cursor" />
+                </div>
               </div>
             )}
             {displayMessages.map((m, i) => (
-              <div key={i} className={`imsg imsg-${m.role}`}>{m.content}</div>
+              <div key={i} className={`imsg-wrap imsg-wrap-${m.role}`}>
+                <span className="imsg-sender">{m.role === 'assistant' ? 'Claude' : 'You'}</span>
+                <div className={`imsg imsg-${m.role}`}>{m.content}</div>
+              </div>
             ))}
             {streaming && streamText && !generatingRevision && (
-              <div className="imsg imsg-assistant imsg-streaming">
-                {streamText}<span className="stream-cursor" />
+              <div className="imsg-wrap imsg-wrap-assistant">
+                <span className="imsg-sender">Claude</span>
+                <div className="imsg imsg-assistant imsg-streaming">
+                  {streamText}<span className="stream-cursor" />
+                </div>
               </div>
             )}
             {streaming && generatingRevision && (
-              <div className="imsg imsg-assistant imsg-streaming">
-                Generating revision… <span className="stream-cursor" />
+              <div className="imsg-wrap imsg-wrap-assistant">
+                <span className="imsg-sender">Claude</span>
+                <div className="imsg imsg-assistant imsg-streaming">
+                  Generating revision… <span className="stream-cursor" />
+                </div>
               </div>
             )}
             <div ref={msgsEndRef} />

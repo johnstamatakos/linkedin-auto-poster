@@ -277,7 +277,7 @@ async function submitArticleUrl(url, config) {
 
 // ─── Main pipeline ────────────────────────────────────────────────────────────
 
-async function runPipeline(config) {
+async function runPipeline(config, onProgress) {
   const minScore    = config.pipeline?.minRelevanceScore || 7;
   const maxDrafts   = config.pipeline?.maxDraftsPerRun   || 3;
   const articleLimit = config.pipeline?.articlesPerCrawlRun || 50;
@@ -305,6 +305,7 @@ async function runPipeline(config) {
     if (created >= maxDrafts) break;
 
     console.log(`[pipeline] Evaluating: "${article.title}"`);
+    onProgress?.({ msg: `Reviewing: "${article.title}"` });
     const evalData = await evaluate(article, rejectionContext, recencyContext);
 
     if (!evalData) {
@@ -328,6 +329,7 @@ async function runPipeline(config) {
     await new Promise(r => setTimeout(r, 1000));
 
     console.log(`[pipeline] Drafting for "${article.title}" (score ${evalData.overallScore})`);
+    onProgress?.({ msg: `Drafting: "${article.title}"` });
     const postText = await draft(article, evalData, config);
 
     if (!postText) {

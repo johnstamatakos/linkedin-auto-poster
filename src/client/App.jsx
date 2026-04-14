@@ -23,8 +23,8 @@ export default function App() {
     if (params.get('linked') || params.get('error')) history.replaceState({}, '', '/')
   }, [])
 
-  const showToast = useCallback((msg, type = 'success') => {
-    setToast({ msg, type })
+  const showToast = useCallback((msg, type = 'success', persistent = false) => {
+    setToast({ msg, type, persistent })
   }, [])
 
   const updateBadges = useCallback(async () => {

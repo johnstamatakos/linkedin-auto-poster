@@ -176,11 +176,21 @@ app.get('/api/sources/health', requireLogin, async (req, res) => {
   }
 });
 
-app.post('/api/run/crawl', requireLogin, (req, res) => {
-  res.json({ ok: true, message: 'Crawl started in background' });
-  scheduler.runCrawlAndPipeline().catch((err) =>
-    console.error('[server] Manual crawl error:', err.message)
-  );
+app.post('/api/run/crawl', requireLogin, async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+
+  const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+
+  try {
+    const result = await scheduler.runCrawlAndPipeline(send);
+    send({ done: true, ...result });
+  } catch (err) {
+    send({ error: err.message });
+  } finally {
+    res.end();
+  }
 });
 
 app.post('/api/run/post', requireLogin, async (req, res) => {

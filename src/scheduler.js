@@ -90,9 +90,10 @@ async function runAnalyticsSync() {
 
 // ─── Crawl + Pipeline ─────────────────────────────────────────────────────────
 
-async function runCrawlAndPipeline() {
+async function runCrawlAndPipeline(onProgress) {
   console.log('[scheduler] Crawl + pipeline starting...');
   try {
+    onProgress?.({ msg: 'Checking source health...' });
     const health = await checkSourceHealth(config);
     setSetting('source_health', JSON.stringify(health));
     setSetting('source_health_checked_at', new Date().toISOString());
@@ -104,8 +105,11 @@ async function runCrawlAndPipeline() {
     ].filter(Boolean);
     if (broken.length) console.warn('[scheduler] Broken sources:', broken.join(' | '));
 
-    const crawlResult    = await runCrawl(config);
-    const pipelineResult = await runPipeline(config);
+    onProgress?.({ msg: 'Crawling sources...' });
+    const crawlResult = await runCrawl(config);
+    onProgress?.({ msg: `Found ${crawlResult.inserted} new articles. Starting pipeline...` });
+
+    const pipelineResult = await runPipeline(config, onProgress);
     console.log('[scheduler] Complete:', { crawlResult, pipelineResult });
     return { crawlResult, pipelineResult };
   } catch (err) {

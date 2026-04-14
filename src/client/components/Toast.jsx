@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 
 export default function Toast({ toast, onDismiss }) {
   useEffect(() => {
-    if (!toast) return
+    if (!toast || toast.persistent) return
     const timer = setTimeout(onDismiss, 3500)
     return () => clearTimeout(timer)
   }, [toast, onDismiss])

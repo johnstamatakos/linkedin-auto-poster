@@ -5,6 +5,7 @@ export default function Dashboard({ onNavigate, showToast, updateBadges }) {
   const [data, setData] = useState(null)
   const [articleUrl, setArticleUrl] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [crawling, setCrawling] = useState(false)
 
   useEffect(() => {
     api('/api/dashboard').then(d => {
@@ -14,8 +15,38 @@ export default function Dashboard({ onNavigate, showToast, updateBadges }) {
   }, [])
 
   async function runCrawl() {
-    await api('/api/run/crawl', 'POST')
-    showToast('Crawl started. New drafts will appear in Review Drafts once complete.')
+    setCrawling(true)
+    showToast('Crawling sources...', 'success', true)
+    try {
+      const res = await fetch('/api/run/crawl', { method: 'POST' })
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buf = ''
+      outer: while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        const lines = buf.split('\n')
+        buf = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const data = JSON.parse(line.slice(6))
+            if (data.done) {
+              const n = data.pipelineResult?.draftsCreated || 0
+              showToast(`Done! ${n} draft${n !== 1 ? 's' : ''} created.`)
+              updateBadges()
+              break outer
+            }
+            if (data.error) { showToast(data.error, 'error'); break outer }
+            if (data.msg)   showToast(data.msg, 'success', true)
+          } catch {}
+        }
+      }
+    } catch (err) {
+      showToast(`Crawl failed: ${err.message}`, 'error')
+    }
+    setCrawling(false)
   }
 
   async function submitArticle() {
@@ -65,7 +96,9 @@ export default function Dashboard({ onNavigate, showToast, updateBadges }) {
           <div className="page-sub">Your automated LinkedIn pipeline</div>
         </div>
         <div className="btn-row">
-          <button className="btn btn-ghost" onClick={runCrawl}>▶ Run Crawl Now</button>
+          <button className="btn btn-ghost" onClick={runCrawl} disabled={crawling}>
+            {crawling ? 'Crawling...' : '▶ Run Crawl Now'}
+          </button>
         </div>
       </div>
 
