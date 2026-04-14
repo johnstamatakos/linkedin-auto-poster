@@ -6,7 +6,13 @@ const SKILL_META = [
     name:        'writing-style',
     label:       'Writing Style',
     icon:        '✍️',
-    description: 'Your voice, tone, format rules, banned phrases, and Points of View.',
+    description: 'Your voice, tone, format rules, and banned phrases.',
+  },
+  {
+    name:        'points-of-view',
+    label:       'Points of View',
+    icon:        '💡',
+    description: 'Your actual opinions. Used by both the evaluator and the drafter to find the right angle.',
   },
   {
     name:        'job-context',
