@@ -216,6 +216,90 @@ function dedupe(arr) {
   });
 }
 
+// ─── TLDR ─────────────────────────────────────────────────────────────────────
+
+const BROWSER_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+function stripUtm(url) {
+  try {
+    const u = new URL(url.replace(/&amp;/g, '&'));
+    ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach(p => u.searchParams.delete(p));
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
+function parseTLDRPage(html, feedName, date) {
+  const articles = [];
+  const articlePattern = /<article class="mt-3">([\s\S]*?)<\/article>/g;
+  let match;
+
+  while ((match = articlePattern.exec(html)) !== null) {
+    const articleHtml = match[1];
+
+    const hrefMatch = articleHtml.match(/href="([^"]+)"/);
+    if (!hrefMatch) continue;
+    const url = stripUtm(hrefMatch[1]);
+
+    const titleMatch = articleHtml.match(/<h3>([\s\S]*?)<\/h3>/);
+    if (!titleMatch) continue;
+    const title = titleMatch[1]
+      .replace(/<[^>]+>/g, '')
+      .replace(/\s*\(\d+ minute read\)/i, '')
+      .replace(/&amp;/g, '&').replace(/&#x27;/g, "'").replace(/&quot;/g, '"').replace(/&[a-z]+;/g, '')
+      .trim();
+
+    if (!title || title.includes('Sponsor')) continue;
+
+    const divStart = articleHtml.indexOf('<div class="newsletter-html">');
+    const summary = divStart !== -1
+      ? articleHtml.slice(divStart + '<div class="newsletter-html">'.length)
+          .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 500)
+      : '';
+
+    articles.push({
+      source:       `TLDR ${feedName.charAt(0).toUpperCase() + feedName.slice(1)}`,
+      source_type:  'tldr',
+      url,
+      title,
+      summary,
+      published_at: date,
+    });
+  }
+
+  return articles;
+}
+
+async function crawlTLDR(config) {
+  const { feeds = ['tech', 'ai'], maxAgeHours = 72 } = config.sources.tldr;
+  const cutoff = new Date(Date.now() - maxAgeHours * 3600 * 1000);
+  const articles = [];
+
+  for (const feedName of feeds) {
+    try {
+      const parsed = await rss.parseURL(`https://tldr.tech/api/rss/${feedName}`);
+      const recent = (parsed.items || []).filter(i => i.link && i.isoDate && new Date(i.isoDate) >= cutoff);
+
+      for (const item of recent) {
+        try {
+          const { data: html } = await axios.get(item.link, {
+            timeout: 15000,
+            headers: { 'User-Agent': BROWSER_UA },
+          });
+          articles.push(...parseTLDRPage(html, feedName, item.isoDate));
+        } catch (err) {
+          console.error(`[crawler] TLDR "${feedName}" page fetch failed:`, err.message);
+        }
+      }
+    } catch (err) {
+      console.error(`[crawler] TLDR "${feedName}" RSS failed:`, err.message);
+    }
+  }
+
+  return dedupe(articles);
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function runCrawl(config) {
@@ -235,6 +319,11 @@ async function runCrawl(config) {
   if (config.sources.rss?.enabled) {
     const r = await crawlRSS(config);
     console.log(`[crawler] RSS: ${r.length} articles`);
+    all.push(...r);
+  }
+  if (config.sources.tldr?.enabled) {
+    const r = await crawlTLDR(config);
+    console.log(`[crawler] TLDR: ${r.length} articles`);
     all.push(...r);
   }
 
