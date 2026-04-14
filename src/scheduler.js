@@ -31,13 +31,21 @@ async function runWeeklyPost() {
 
   try {
     const linkedInPostId = await postToLinkedIn(next.post_text);
-    insertPost({ draft_id: next.id, post_text: next.post_text, linkedin_post_id: linkedInPostId, status: 'posted' });
-    markDraftPosted(next.id);
+    try {
+      insertPost({ draft_id: next.id, post_text: next.post_text, linkedin_post_id: linkedInPostId, status: 'posted' });
+      markDraftPosted(next.id);
+    } catch (dbErr) {
+      console.error(`[scheduler] DB write failed after successful post (LinkedIn ID: ${linkedInPostId}):`, dbErr.message);
+    }
     console.log(`[scheduler] Posted. LinkedIn ID: ${linkedInPostId}`);
     return { posted: true, draftId: next.id, linkedInPostId };
   } catch (err) {
     console.error('[scheduler] Post failed:', err.message);
-    insertPost({ draft_id: next.id, post_text: next.post_text, linkedin_post_id: null, status: 'failed' });
+    try {
+      insertPost({ draft_id: next.id, post_text: next.post_text, linkedin_post_id: null, status: 'failed' });
+    } catch (dbErr) {
+      console.error('[scheduler] DB write for failed post also failed:', dbErr.message);
+    }
     return { posted: false, error: err.message };
   }
 }

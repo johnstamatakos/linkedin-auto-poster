@@ -261,6 +261,15 @@ app.put('/api/config', requireLogin, (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── Global error handler ─────────────────────────────────────────────────────
+
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error('[server] Unhandled error:', err.message);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: err.message || 'Internal server error' });
+});
+
 // ─── Start ────────────────────────────────────────────────────────────────────
 
 scheduler.start(loadConfig());

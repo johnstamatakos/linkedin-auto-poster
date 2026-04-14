@@ -73,7 +73,12 @@ async function streamCalibration({ skillName, currentContent, messages, res }) {
 // ─── Append Point of View from rejection ─────────────────────────────────────
 
 async function appendPointOfView(rejectionNote, postText) {
-  const currentContent = fs.readFileSync(path.join(SKILLS, 'writing-style.md'), 'utf-8');
+  let currentContent;
+  try {
+    currentContent = fs.readFileSync(path.join(SKILLS, 'writing-style.md'), 'utf-8');
+  } catch (err) {
+    throw new Error(`Could not read writing-style.md: ${err.message}`);
+  }
 
   const msg = await client.messages.create({
     model:      'claude-sonnet-4-6',

@@ -311,9 +311,17 @@ async function runPipeline(config) {
 }
 
 function reloadSkills() {
-  skills.contentEval  = fs.readFileSync(path.join(SKILLS, 'content-eval.md'),  'utf-8');
-  skills.jobContext   = fs.readFileSync(path.join(SKILLS, 'job-context.md'),   'utf-8');
-  skills.writingStyle = fs.readFileSync(path.join(SKILLS, 'writing-style.md'), 'utf-8');
+  try {
+    const contentEval  = fs.readFileSync(path.join(SKILLS, 'content-eval.md'),  'utf-8');
+    const jobContext   = fs.readFileSync(path.join(SKILLS, 'job-context.md'),   'utf-8');
+    const writingStyle = fs.readFileSync(path.join(SKILLS, 'writing-style.md'), 'utf-8');
+    skills.contentEval  = contentEval;
+    skills.jobContext   = jobContext;
+    skills.writingStyle = writingStyle;
+  } catch (err) {
+    console.error('[pipeline] Failed to reload skills:', err.message);
+    throw err;
+  }
 }
 
 module.exports = { runPipeline, regenerateDraft, submitArticleUrl, reloadSkills };
