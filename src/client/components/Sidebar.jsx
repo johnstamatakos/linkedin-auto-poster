@@ -19,7 +19,7 @@ export default function Sidebar({ currentPage, onNavigate, pendingCount, queueCo
 
   return (
     <nav className="sidebar">
-      <div className="logo"><span>LI</span> Auto Poster</div>
+      <div className="logo"><img src="/logo.png" alt="Logo" /></div>
       {NAV_ITEMS.map(({ page, label, badgeKey, warn }) => (
         <div
           key={page}

@@ -9,8 +9,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* Sidebar */
 .sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);padding:20px 0;flex-shrink:0;position:fixed;top:0;bottom:0;left:0;overflow-y:auto;display:flex;flex-direction:column}
-.logo{padding:0 20px 20px;font-size:15px;font-weight:600;border-bottom:1px solid var(--border);margin-bottom:12px}
-.logo span{color:var(--accent)}
+.logo{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:12px}
+.logo img{width:100%;height:auto;display:block}
 .nav{display:flex;align-items:center;gap:10px;padding:9px 20px;cursor:pointer;font-size:14px;color:var(--muted);border-left:2px solid transparent;transition:all .15s}
 .nav:hover{color:var(--text);background:var(--surface2)}
 .nav.active{color:var(--text);border-left-color:var(--accent);background:var(--surface2)}
