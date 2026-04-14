@@ -106,7 +106,7 @@ export default function Dashboard({ onNavigate, showToast, updateBadges }) {
       <div className="page-header">
         <div>
           <div className="page-title">Dashboard</div>
-          <div className="page-sub">Your automated LinkedIn pipeline</div>
+          <div className="page-sub">Set up your expertise and opinions once. The pipeline crawls tech sources on a schedule, scores each article against your criteria, and drafts posts in your voice — ready to publish to LinkedIn.</div>
         </div>
         <div className="btn-row">
           <button className="btn btn-ghost" onClick={runCrawl} disabled={crawling}>
