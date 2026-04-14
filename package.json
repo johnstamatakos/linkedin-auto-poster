@@ -10,7 +10,8 @@
     "reset-db": "node scripts/reset-db.js",
     "clear-drafts": "node scripts/clear-drafts.js",
     "clear-articles": "node scripts/clear-articles.js",
-    "clear-all": "node scripts/clear-articles.js && node scripts/clear-drafts.js"
+    "clear-all": "node scripts/clear-articles.js && node scripts/clear-drafts.js",
+    "deploy": "bash scripts/deploy.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

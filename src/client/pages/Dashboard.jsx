@@ -1,6 +1,19 @@
 import { useState, useEffect } from 'react'
 import { api, fmtDate } from '../utils/api'
 
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+function parseCron(cron) {
+  if (!cron) return cron
+  const [min, hour, , , weekday] = cron.split(' ')
+  const h = parseInt(hour), m = parseInt(min)
+  const time = `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`
+  const days = weekday === '*'
+    ? 'every day'
+    : weekday.split(',').map(d => DAYS[parseInt(d)]).join(', ')
+  return `${days} at ${time}`
+}
+
 export default function Dashboard({ onNavigate, showToast, updateBadges }) {
   const [data, setData] = useState(null)
   const [articleUrl, setArticleUrl] = useState('')
@@ -143,8 +156,8 @@ export default function Dashboard({ onNavigate, showToast, updateBadges }) {
       <div className="card">
         <div style={{ fontWeight: 600, marginBottom: 10 }}>Schedule</div>
         <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 2.2 }}>
-          <div>Crawl: {config.schedule?.crawlCron} &nbsp; ({config.schedule?.timezone})</div>
-          <div>Posts: {config.schedule?.postDayOfWeek} at {config.schedule?.postTime}</div>
+          <div>Crawl: {parseCron(config.schedule?.crawlCron)} &nbsp; ({config.schedule?.timezone})</div>
+          <div>Posts: {parseCron(config.schedule?.postCron)}</div>
           <div>Last post: {stats.lastPost ? new Date(stats.lastPost).toLocaleDateString() : 'None yet'}</div>
           <div>Backlog: {stats.draftsApproved} post{stats.draftsApproved === 1 ? '' : 's'} queued</div>
         </div>
