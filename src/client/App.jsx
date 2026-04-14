@@ -14,6 +14,7 @@ export default function App() {
   const [pendingCount, setPendingCount] = useState(0)
   const [queueCount, setQueueCount] = useState(0)
   const [toast, setToast] = useState(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -34,17 +35,25 @@ export default function App() {
     } catch {}
   }, [])
 
+  function navigate(page) {
+    setCurrentPage(page)
+    setSidebarOpen(false)
+  }
+
   return (
     <div className="layout">
+      <button className="hamburger" onClick={() => setSidebarOpen(o => !o)} aria-label="Menu">☰</button>
+      <div className={`sidebar-overlay${sidebarOpen ? ' open' : ''}`} onClick={() => setSidebarOpen(false)} />
       <Sidebar
         currentPage={currentPage}
-        onNavigate={setCurrentPage}
+        onNavigate={navigate}
         pendingCount={pendingCount}
         queueCount={queueCount}
+        isOpen={sidebarOpen}
       />
       <main className="main">
         {currentPage === 'dashboard' && (
-          <Dashboard onNavigate={setCurrentPage} showToast={showToast} updateBadges={updateBadges} />
+          <Dashboard onNavigate={navigate} showToast={showToast} updateBadges={updateBadges} />
         )}
         {currentPage === 'review' && (
           <ReviewDrafts showToast={showToast} updateBadges={updateBadges} />

@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   { page: 'config',    label: '⚙️ Settings' },
 ]
 
-export default function Sidebar({ currentPage, onNavigate, pendingCount, queueCount }) {
+export default function Sidebar({ currentPage, onNavigate, pendingCount, queueCount, isOpen }) {
   async function logout() {
     await api('/api/logout', 'POST')
     window.location.href = '/login'
@@ -18,7 +18,7 @@ export default function Sidebar({ currentPage, onNavigate, pendingCount, queueCo
   const counts = { pending: pendingCount, queue: queueCount }
 
   return (
-    <nav className="sidebar">
+    <nav className={`sidebar${isOpen ? ' open' : ''}`}>
       <div className="logo"><img src="/logo.png" alt="Logo" /></div>
       {NAV_ITEMS.map(({ page, label, badgeKey, warn }) => (
         <div
