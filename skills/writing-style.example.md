@@ -37,24 +37,8 @@ These phrases signal generic LinkedIn voice. Never use them:
 
 ## Points of View
 
-These are [YOUR NAME]'s actual opinions on the topics you post about. When drafting
-a post, find the opinion that most closely matches the article's subject and use
-it as the angle. The post should feel like [YOUR NAME] reacting to the article
-through one of these lenses, not summarizing the article with a name attached.
-
-**[Topic area you post on, e.g. "AI in Production"]**
-- [A specific conviction you hold, stated plainly]
-- [Another conviction on this topic]
-
-**[Another topic area, e.g. "Engineering Org Design"]**
-- [A conviction]
-- [Another]
-
-**[Add as many topic areas as are relevant to what you post about]**
-
-The more specific and opinionated these are, the better the drafts will be.
-Vague beliefs produce generic posts. Sharp, debatable convictions produce
-posts worth reading.
+John's opinions are maintained in the separate Points of View skill file,
+provided to you in context. Use them as the angle for every post.
 
 ## The Post Is Not a Summary
 

@@ -12,9 +12,10 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const SKILLS = path.join(__dirname, '..', 'skills');
 
 const skills = {
-  contentEval:  fs.readFileSync(path.join(SKILLS, 'content-eval.md'),  'utf-8'),
-  jobContext:   fs.readFileSync(path.join(SKILLS, 'job-context.md'),   'utf-8'),
-  writingStyle: fs.readFileSync(path.join(SKILLS, 'writing-style.md'), 'utf-8'),
+  contentEval:  fs.readFileSync(path.join(SKILLS, 'content-eval.md'),    'utf-8'),
+  jobContext:   fs.readFileSync(path.join(SKILLS, 'job-context.md'),     'utf-8'),
+  writingStyle: fs.readFileSync(path.join(SKILLS, 'writing-style.md'),   'utf-8'),
+  pointsOfView: fs.readFileSync(path.join(SKILLS, 'points-of-view.md'), 'utf-8'),
 };
 
 // ─── Step 1: Evaluate ─────────────────────────────────────────────────────────
@@ -69,6 +70,12 @@ For job context, use this reference:
 
 ${skills.jobContext}
 
+---
+
+These are John's actual points of view. Use them to assess opinion-triggered relevance:
+
+${skills.pointsOfView}
+
 ${rejectionBlock}${recencyBlock}Return ONLY a valid JSON object. No markdown, no explanation, no preamble.`;
 
   const user = `Evaluate this article for LinkedIn post potential.
@@ -108,6 +115,9 @@ ${skills.writingStyle}
 
 JOB CONTEXT:
 ${skills.jobContext}
+
+POINTS OF VIEW:
+${skills.pointsOfView}
 
 CRITICAL INSTRUCTION — READ BEFORE DRAFTING:
 The post must start from a Point of View, not from the article. Before writing
@@ -357,12 +367,14 @@ async function runPipeline(config, onProgress) {
 
 function reloadSkills() {
   try {
-    const contentEval  = fs.readFileSync(path.join(SKILLS, 'content-eval.md'),  'utf-8');
-    const jobContext   = fs.readFileSync(path.join(SKILLS, 'job-context.md'),   'utf-8');
-    const writingStyle = fs.readFileSync(path.join(SKILLS, 'writing-style.md'), 'utf-8');
+    const contentEval  = fs.readFileSync(path.join(SKILLS, 'content-eval.md'),    'utf-8');
+    const jobContext   = fs.readFileSync(path.join(SKILLS, 'job-context.md'),     'utf-8');
+    const writingStyle = fs.readFileSync(path.join(SKILLS, 'writing-style.md'),   'utf-8');
+    const pointsOfView = fs.readFileSync(path.join(SKILLS, 'points-of-view.md'), 'utf-8');
     skills.contentEval  = contentEval;
     skills.jobContext   = jobContext;
     skills.writingStyle = writingStyle;
+    skills.pointsOfView = pointsOfView;
   } catch (err) {
     console.error('[pipeline] Failed to reload skills:', err.message);
     throw err;

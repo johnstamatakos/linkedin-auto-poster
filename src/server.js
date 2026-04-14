@@ -231,7 +231,7 @@ app.get('/api/analytics', requireLogin, (req, res) => {
 // ─── Skills / Calibrate ───────────────────────────────────────────────────────
 
 const SKILLS_DIR     = path.join(__dirname, '..', 'skills');
-const ALLOWED_SKILLS = ['writing-style', 'content-eval', 'job-context'];
+const ALLOWED_SKILLS = ['writing-style', 'content-eval', 'job-context', 'points-of-view'];
 
 app.get('/api/skills/:name', requireLogin, (req, res) => {
   if (!ALLOWED_SKILLS.includes(req.params.name))

@@ -44,18 +44,21 @@ Each skill can be set up through a guided AI interview or edited directly. The i
 
 Skills are loaded fresh on every pipeline run, so changes take effect immediately without a server restart.
 
-### The three skills
+### The four skills
 
-**Writing Style** (`skills/writing-style.md`) — your LinkedIn voice. Covers tone, format rules, banned phrases, and — most importantly — your Points of View: a set of named topic areas with specific, opinionated convictions. When a draft is written, it leads with whichever Point of View most closely matches the article. The post is your reaction to the article, not a summary of it. The more specific and debatable your convictions, the better the drafts.
+**Writing Style** (`skills/writing-style.md`) — your LinkedIn voice. Covers tone, format rules, and banned phrases. Pairs with the Points of View file to determine the angle of every draft.
+
+**Points of View** (`skills/points-of-view.md`) — your actual opinions. A set of named topic areas with specific, opinionated convictions. Both the evaluator and the drafter load this file. The evaluator uses it to identify opinion-triggered relevance — an article that gives you something to react to is relevant even if the topic isn't explicitly in your domain. The drafter uses it to lead with your perspective instead of summarizing the article. The more specific and debatable your convictions, the better the output.
 
 **Job Context** (`skills/job-context.md`) — your professional grounding. Current role, past experience, and public metrics that make application sentences feel specific rather than generic. Also defines grounding rules: which references are fair game, and when it's better to make a strong industry observation than force a personal reference that doesn't fit.
 
-**Content Evaluation** (`skills/content-eval.md`) — your relevance filter. Controls scoring weights across four dimensions (relevance, timeliness, specificity, post potential), defines high- and low-relevance signals for your domain, and sets the minimum score an article needs to reach drafting. Articles that connect to a Point of View qualify as relevant even if the topic area isn't explicitly listed.
+**Content Evaluation** (`skills/content-eval.md`) — your relevance filter. Controls scoring weights across four dimensions (relevance, timeliness, specificity, post potential), defines high- and low-relevance signals for your domain, and sets the minimum score an article needs to reach drafting.
 
 ### Setting up from scratch
 
 ```bash
 cp skills/writing-style.example.md skills/writing-style.md
+cp skills/points-of-view.example.md skills/points-of-view.md
 cp skills/job-context.example.md skills/job-context.md
 cp skills/content-eval.example.md skills/content-eval.md
 ```
