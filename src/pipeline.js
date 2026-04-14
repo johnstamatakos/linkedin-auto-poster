@@ -4,7 +4,7 @@ const fs        = require('fs');
 const path      = require('path');
 const {
   getPendingArticles, updateArticleEval, markArticleDrafted, insertDraft,
-  getRecentRejectionNotes, getDraftById, updateDraftText,
+  getRecentRejectionNotes, getRecentPostTitles, getDraftById, updateDraftText,
   insertArticle, getArticleByUrl,
 } = require('./db');
 
@@ -19,7 +19,15 @@ const skills = {
 
 // ─── Step 1: Evaluate ─────────────────────────────────────────────────────────
 
-async function evaluate(article, rejectionContext) {
+function buildRecencyContext(recentPosts) {
+  if (!recentPosts.length) return null;
+  return recentPosts.map(p => {
+    const daysAgo = Math.round((Date.now() - new Date(p.posted_at).getTime()) / 86400000);
+    return `- "${p.title}" (${daysAgo} day${daysAgo !== 1 ? 's' : ''} ago)`;
+  }).join('\n');
+}
+
+async function evaluate(article, rejectionContext, recencyContext) {
   const rejectionBlock = rejectionContext
     ? `---
 
@@ -29,6 +37,22 @@ your scoring — if this article is likely to produce content the author would
 reject for similar reasons, score it lower and set pass to false.
 
 ${rejectionContext}
+
+---
+
+`
+    : '';
+
+  const recencyBlock = recencyContext
+    ? `---
+
+RECENT POSTS (do not repeat these themes):
+The author has recently published posts on these articles. If the current article
+would produce substantially the same theme, angle, or core argument as one of
+these, set tooSimilarToRecent to true and explain briefly in similarityNote.
+Minor topical overlap is fine — near-identical angles are not.
+
+${recencyContext}
 
 ---
 
@@ -45,7 +69,7 @@ For job context, use this reference:
 
 ${skills.jobContext}
 
-${rejectionBlock}Return ONLY a valid JSON object. No markdown, no explanation, no preamble.`;
+${rejectionBlock}${recencyBlock}Return ONLY a valid JSON object. No markdown, no explanation, no preamble.`;
 
   const user = `Evaluate this article for LinkedIn post potential.
 
@@ -220,7 +244,10 @@ async function submitArticleUrl(url, config) {
     ? rejectionNotes.map(r => `- "${r.title}" (${r.source}): ${r.rejection_note}`).join('\n')
     : null;
 
-  const evalData = await evaluate(article, rejectionContext);
+  const recentPosts    = getRecentPostTitles(10);
+  const recencyContext = buildRecencyContext(recentPosts);
+
+  const evalData = await evaluate(article, rejectionContext, recencyContext);
   if (!evalData) throw new Error('Evaluation failed');
 
   updateArticleEval(article.id, evalData.overallScore, evalData, 'evaluated');
@@ -241,7 +268,11 @@ async function submitArticleUrl(url, config) {
   markArticleDrafted(article.id);
   console.log(`[pipeline] Manual draft created for "${article.title}"`);
 
-  return { score: evalData.overallScore, title: article.title };
+  return {
+    score: evalData.overallScore,
+    title: article.title,
+    ...(evalData.tooSimilarToRecent && { similarityWarning: evalData.similarityNote }),
+  };
 }
 
 // ─── Main pipeline ────────────────────────────────────────────────────────────
@@ -260,6 +291,12 @@ async function runPipeline(config) {
     console.log(`[pipeline] Injecting ${rejectionNotes.length} rejection notes into eval`);
   }
 
+  const recentPosts    = getRecentPostTitles(10);
+  const recencyContext = buildRecencyContext(recentPosts);
+  if (recencyContext) {
+    console.log(`[pipeline] Injecting ${recentPosts.length} recent post titles into eval`);
+  }
+
   const articles = getPendingArticles(articleLimit);
   console.log(`[pipeline] ${articles.length} pending articles`);
   let created = 0;
@@ -268,10 +305,16 @@ async function runPipeline(config) {
     if (created >= maxDrafts) break;
 
     console.log(`[pipeline] Evaluating: "${article.title}"`);
-    const evalData = await evaluate(article, rejectionContext);
+    const evalData = await evaluate(article, rejectionContext, recencyContext);
 
     if (!evalData) {
       updateArticleEval(article.id, 0, {}, 'skipped');
+      continue;
+    }
+
+    if (evalData.tooSimilarToRecent) {
+      console.log(`[pipeline] Skip "${article.title}" — too similar to recent post: ${evalData.similarityNote}`);
+      updateArticleEval(article.id, evalData.overallScore, evalData, 'skipped');
       continue;
     }
 

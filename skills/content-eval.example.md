@@ -52,6 +52,12 @@ overallScore = (relevance × 0.5) + (timeliness × 0.2) + (specificity × 0.15) 
 
 Round to one decimal place.
 
+## Recency Check
+If recent posts are provided in context: set `tooSimilarToRecent: true` if this
+article would produce a post with substantially the same theme, angle, or core
+argument as a recently published one. Minor topical overlap is fine — near-identical
+angles are not. If no recent posts are provided, always set `tooSimilarToRecent: false`.
+
 ## Output Format
 
 Return ONLY a valid JSON object. No markdown fences, no explanation, no preamble.
@@ -66,7 +72,10 @@ Return ONLY a valid JSON object. No markdown fences, no explanation, no preamble
   "keyInsight": "One sentence: the core technical or leadership takeaway that would anchor a LinkedIn post.",
   "applicationHook": "One sentence: how this connects to the author's specific work or experience.",
   "pass": true,
-  "skipReason": null
+  "skipReason": null,
+  "tooSimilarToRecent": false,
+  "similarityNote": null
 }
 
 If pass is false, populate skipReason with a brief explanation.
+If tooSimilarToRecent is true, populate similarityNote with a one-sentence explanation of which recent post it overlaps with and why.

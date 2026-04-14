@@ -160,6 +160,18 @@ function getPostsPendingAnalytics() {
   `).all();
 }
 
+function getRecentPostTitles(limit = 10) {
+  return db.prepare(`
+    SELECT a.title, p.posted_at
+    FROM posts p
+    LEFT JOIN drafts d ON p.draft_id = d.id
+    LEFT JOIN articles a ON d.article_id = a.id
+    WHERE p.status = 'posted' AND a.title IS NOT NULL
+    ORDER BY p.posted_at DESC
+    LIMIT ?
+  `).all(limit);
+}
+
 function getRecentRejectionNotes(limit = 15) {
   return db.prepare(`
     SELECT d.rejection_note, a.title, a.source
@@ -277,7 +289,7 @@ function getStats() {
 module.exports = {
   insertArticle, getPendingArticles, updateArticleEval, markArticleDrafted, getArticleByUrl,
   insertDraft, getDraftsByStatus, getApprovedQueue, getDraftById,
-  approveDraft, rejectDraft, getRecentRejectionNotes, updateDraftText, reorderQueue,
+  approveDraft, rejectDraft, getRecentRejectionNotes, getRecentPostTitles, updateDraftText, reorderQueue,
   getNextApprovedPost, markDraftPosted,
   insertPost, getRecentPosts,
   updatePostAnalytics, getPostsPendingAnalytics,
