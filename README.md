@@ -1,5 +1,3 @@
-<img width="1920" height="2240" alt="logo" src="https://github.com/user-attachments/assets/940e1ef9-908a-4b6c-94a6-3140d1f94f5d" />
-
 # LinkedIn Auto Poster
 
 Stay on top of what's moving in tech — without spending hours finding it. This tool surfaces cutting-edge articles and trends that match your work, your opinions, and the direction you think the industry is heading. When something relevant appears, it drafts a post in your voice and queues it for your review. One click to approve, one post to your network.
