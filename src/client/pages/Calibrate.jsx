@@ -24,7 +24,8 @@ const SKILL_META = [
 
 // ─── SkillCard ────────────────────────────────────────────────────────────────
 
-function SkillCard({ name, label, icon, description, content, onSaved, showToast }) {
+function SkillCard({ name, label, icon, description, content, onSaved, showToast, defaultExpanded = false }) {
+  const [expanded, setExpanded] = useState(defaultExpanded)
   const [mode, setMode] = useState('idle')         // idle | interview | review | edit
   const [editContent, setEditContent]   = useState(content)
   const [messages, setMessages]         = useState([])  // full API message history
@@ -65,6 +66,7 @@ function SkillCard({ name, label, icon, description, content, onSaved, showToast
   }
 
   function startInterview() {
+    setExpanded(true)
     const initMsgs = [{ role: 'user', content: 'START_INTERVIEW' }]
     setMessages(initMsgs)
     setMode('interview')
@@ -111,6 +113,7 @@ function SkillCard({ name, label, icon, description, content, onSaved, showToast
     setMessages([])
     setStreamText('')
     setGeneratingRevision(false)
+    setExpanded(false)
   }
 
   const isConfigured = content && content.length > 100
@@ -121,19 +124,20 @@ function SkillCard({ name, label, icon, description, content, onSaved, showToast
     <div className="skill-card">
 
       {/* Header */}
-      <div className="skill-card-header">
+      <div className="skill-card-header" onClick={() => setExpanded(e => !e)} style={{ cursor: 'pointer' }}>
+        <span className="skill-toggle">{expanded ? '▾' : '▸'}</span>
         <span className="skill-icon">{icon}</span>
         <div className="skill-info">
           <div className="skill-label">{label}</div>
           <div className="skill-desc">{description}</div>
         </div>
-        <div className="skill-card-actions">
+        <div className="skill-card-actions" onClick={e => e.stopPropagation()}>
           {mode === 'idle' && (
             <>
               <button className="btn btn-primary btn-sm" onClick={startInterview}>
                 Calibrate with AI
               </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => { setEditContent(content); setMode('edit') }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setExpanded(true); setEditContent(content); setMode('edit') }}>
                 Edit
               </button>
             </>
@@ -145,7 +149,7 @@ function SkillCard({ name, label, icon, description, content, onSaved, showToast
       </div>
 
       {/* Idle — preview */}
-      {mode === 'idle' && (
+      {expanded && mode === 'idle' && (
         <div className="skill-card-body">
           {isConfigured
             ? <div className="skill-preview">{content.split('\n').slice(0, 5).join('\n')}</div>
@@ -155,7 +159,7 @@ function SkillCard({ name, label, icon, description, content, onSaved, showToast
       )}
 
       {/* Interview */}
-      {mode === 'interview' && (
+      {expanded && mode === 'interview' && (
         <div className="skill-card-body">
           <div className="interview-msgs">
             {displayMessages.length === 0 && streaming && (
@@ -212,7 +216,7 @@ function SkillCard({ name, label, icon, description, content, onSaved, showToast
       )}
 
       {/* Review proposed revision */}
-      {mode === 'review' && (
+      {expanded && mode === 'review' && (
         <div className="skill-card-body">
           <div className="section-sub" style={{ marginBottom: 10 }}>
             Review the proposed revision — edit before saving if needed.
@@ -232,7 +236,7 @@ function SkillCard({ name, label, icon, description, content, onSaved, showToast
       )}
 
       {/* Direct edit */}
-      {mode === 'edit' && (
+      {expanded && mode === 'edit' && (
         <div className="skill-card-body">
           <textarea
             className="post-edit"
@@ -288,13 +292,14 @@ export default function Calibrate({ showToast }) {
         </div>
       </div>
       <div className="calibrate-grid">
-        {SKILL_META.map(s => (
+        {SKILL_META.map((s, idx) => (
           <SkillCard
             key={s.name}
             {...s}
             content={skillContents[s.name] || ''}
             onSaved={handleSaved}
             showToast={showToast}
+            defaultExpanded={idx === 0}
           />
         ))}
       </div>
