@@ -12,7 +12,7 @@ function getAuthUrl(state) {
     client_id:     process.env.LINKEDIN_CLIENT_ID,
     redirect_uri:  process.env.LINKEDIN_REDIRECT_URI,
     state,
-    scope: 'openid profile w_member_social r_member_social',
+    scope: 'openid profile email w_member_social',
   });
 }
 

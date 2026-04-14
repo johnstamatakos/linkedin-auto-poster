@@ -1,9 +1,10 @@
 require('dotenv').config();
-const express  = require('express');
-const session  = require('express-session');
-const path     = require('path');
-const fs       = require('fs');
-const crypto   = require('crypto');
+const express      = require('express');
+const session      = require('express-session');
+const rateLimit    = require('express-rate-limit');
+const path         = require('path');
+const fs           = require('fs');
+const crypto       = require('crypto');
 
 const db = require('./db');
 const { getSourceStats, getEngagementTrends } = db;
@@ -34,8 +35,16 @@ app.use(session({
   secret:            process.env.SESSION_SECRET || 'dev-secret-change-me',
   resave:            false,
   saveUninitialized: false,
-  cookie:            { secure: false, maxAge: 7 * 24 * 60 * 60 * 1000 },
+  cookie:            { secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 60 * 60 * 1000 },
 }));
+
+const loginLimiter = rateLimit({
+  windowMs:         15 * 60 * 1000, // 15 minutes
+  max:              10,              // 10 attempts per window
+  standardHeaders:  true,
+  legacyHeaders:    false,
+  message:          { error: 'Too many login attempts, please try again later.' },
+});
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // ─── Auth middleware ──────────────────────────────────────────────────────────
@@ -52,7 +61,7 @@ app.get('/login', (req, res) =>
   res.sendFile(path.join(__dirname, '..', 'public', 'login.html'))
 );
 
-app.post('/api/login', (req, res) => {
+app.post('/api/login', loginLimiter, (req, res) => {
   if (req.body.password === UI_PASSWORD) {
     req.session.authenticated = true;
     res.json({ ok: true });
@@ -283,7 +292,7 @@ app.put('/api/config', requireLogin, (req, res) => {
 app.use((err, req, res, next) => {
   console.error('[server] Unhandled error:', err.message);
   if (res.headersSent) return next(err);
-  res.status(500).json({ error: err.message || 'Internal server error' });
+  res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message });
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
