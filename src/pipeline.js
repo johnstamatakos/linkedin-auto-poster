@@ -5,7 +5,7 @@ const path      = require('path');
 const {
   getPendingArticles, updateArticleEval, markArticleDrafted, insertDraft,
   getRecentRejectionNotes, getRecentPostTitles, getDraftById, updateDraftText,
-  insertArticle, getArticleByUrl,
+  insertArticle, getArticleByUrl, getArticleById,
 } = require('./db');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -17,6 +17,18 @@ const skills = {
   writingStyle: fs.readFileSync(path.join(SKILLS, 'writing-style.md'),   'utf-8'),
   pointsOfView: fs.readFileSync(path.join(SKILLS, 'points-of-view.md'), 'utf-8'),
 };
+
+// ─── Eval context ─────────────────────────────────────────────────────────────
+
+function buildEvalContext() {
+  const rejectionNotes = getRecentRejectionNotes(15);
+  const rejectionContext = rejectionNotes.length
+    ? rejectionNotes.map(r => `- "${r.title}" (${r.source}): ${r.rejection_note}`).join('\n')
+    : null;
+  const recentPosts    = getRecentPostTitles(10);
+  const recencyContext = buildRecencyContext(recentPosts);
+  return { rejectionContext, recencyContext };
+}
 
 // ─── Step 1: Evaluate ─────────────────────────────────────────────────────────
 
@@ -249,14 +261,7 @@ async function submitArticleUrl(url, config) {
   if (!article) throw new Error('Failed to store article');
 
   // Evaluate
-  const rejectionNotes   = getRecentRejectionNotes(15);
-  const rejectionContext = rejectionNotes.length
-    ? rejectionNotes.map(r => `- "${r.title}" (${r.source}): ${r.rejection_note}`).join('\n')
-    : null;
-
-  const recentPosts    = getRecentPostTitles(10);
-  const recencyContext = buildRecencyContext(recentPosts);
-
+  const { rejectionContext, recencyContext } = buildEvalContext();
   const evalData = await evaluate(article, rejectionContext, recencyContext);
   if (!evalData) throw new Error('Evaluation failed');
 
@@ -293,19 +298,9 @@ async function runPipeline(config, onProgress) {
   const articleLimit = config.pipeline?.articlesPerCrawlRun || 50;
   console.log('[pipeline] Starting...');
 
-  const rejectionNotes   = getRecentRejectionNotes(15);
-  const rejectionContext = rejectionNotes.length
-    ? rejectionNotes.map(r => `- "${r.title}" (${r.source}): ${r.rejection_note}`).join('\n')
-    : null;
-  if (rejectionContext) {
-    console.log(`[pipeline] Injecting ${rejectionNotes.length} rejection notes into eval`);
-  }
-
-  const recentPosts    = getRecentPostTitles(10);
-  const recencyContext = buildRecencyContext(recentPosts);
-  if (recencyContext) {
-    console.log(`[pipeline] Injecting ${recentPosts.length} recent post titles into eval`);
-  }
+  const { rejectionContext, recencyContext } = buildEvalContext();
+  if (rejectionContext) console.log('[pipeline] Injecting rejection context into eval');
+  if (recencyContext)   console.log('[pipeline] Injecting recency context into eval');
 
   const articles = getPendingArticles(articleLimit);
   console.log(`[pipeline] ${articles.length} pending articles`);
@@ -381,4 +376,35 @@ function reloadSkills() {
   }
 }
 
-module.exports = { runPipeline, regenerateDraft, submitArticleUrl, reloadSkills };
+async function draftArticleById(id, config) {
+  const article = getArticleById(id);
+  if (!article) throw new Error('Article not found');
+  if (article.status === 'drafted') throw new Error('Article already has a draft');
+
+  console.log(`[pipeline] Manual draft by ID for "${article.title}"`);
+
+  const { rejectionContext, recencyContext } = buildEvalContext();
+  const evalData = await evaluate(article, rejectionContext, recencyContext);
+  if (!evalData) throw new Error('Evaluation failed');
+
+  updateArticleEval(article.id, evalData.overallScore, evalData, 'evaluated');
+
+  // Always draft — user explicitly requested it
+  const postText = await draft(article, evalData, config);
+  if (!postText) throw new Error('Draft generation failed');
+
+  insertDraft({
+    article_id:         article.id,
+    post_text:          postText,
+    primary_connection: evalData.primaryConnection || null,
+    key_insight:        evalData.keyInsight        || null,
+    eval_score:         evalData.overallScore,
+  });
+
+  markArticleDrafted(article.id);
+  console.log(`[pipeline] Draft created for "${article.title}" (score ${evalData.overallScore})`);
+
+  return { score: evalData.overallScore, title: article.title };
+}
+
+module.exports = { runPipeline, regenerateDraft, submitArticleUrl, draftArticleById, reloadSkills };

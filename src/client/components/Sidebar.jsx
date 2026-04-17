@@ -1,12 +1,29 @@
 import { api } from '../utils/api'
 
+const Icon = ({ d, children, size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"
+    style={{ flexShrink: 0 }}>
+    {d ? <path d={d} /> : children}
+  </svg>
+)
+
+const NAV_ICONS = {
+  dashboard: <Icon><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></Icon>,
+review:    <Icon><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></Icon>,
+  queue:     <Icon><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></Icon>,
+  analytics: <Icon><path d="M18 20V10M12 20V4M6 20v-6"/><path d="M2 20h20"/></Icon>,
+  calibrate: <Icon><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></Icon>,
+  config:    <Icon><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></Icon>,
+}
+
 const NAV_ITEMS = [
-  { page: 'dashboard', label: '📊 Dashboard' },
-  { page: 'review',    label: '📝 Review Drafts', badgeKey: 'pending' },
-  { page: 'queue',     label: '📋 Post Queue',    badgeKey: 'queue', warn: true },
-  { page: 'analytics', label: '📈 Analytics' },
-  { page: 'calibrate', label: '🎯 Calibrate' },
-  { page: 'config',    label: '⚙️ Settings' },
+  { page: 'dashboard', label: 'Dashboard',     icon: 'dashboard' },
+  { page: 'review',    label: 'Review Drafts',  icon: 'review',    badgeKey: 'pending' },
+  { page: 'queue',     label: 'Post Queue',     icon: 'queue',     badgeKey: 'queue', warn: true },
+  { page: 'analytics', label: 'Analytics',      icon: 'analytics' },
+  { page: 'calibrate', label: 'Calibrate',      icon: 'calibrate' },
+  { page: 'config',    label: 'Settings',       icon: 'config' },
 ]
 
 export default function Sidebar({ currentPage, onNavigate, pendingCount, queueCount, isOpen }) {
@@ -20,12 +37,14 @@ export default function Sidebar({ currentPage, onNavigate, pendingCount, queueCo
   return (
     <nav className={`sidebar${isOpen ? ' open' : ''}`}>
       <div className="logo"><img src="/logo.png" alt="Logo" /></div>
-      {NAV_ITEMS.map(({ page, label, badgeKey, warn }) => (
+      <div className="nav-section">Navigation</div>
+      {NAV_ITEMS.map(({ page, label, icon, badgeKey, warn }) => (
         <div
           key={page}
           className={`nav${currentPage === page ? ' active' : ''}`}
           onClick={() => onNavigate(page)}
         >
+          {NAV_ICONS[icon]}
           {label}
           {badgeKey !== undefined && (
             <span className={`badge${warn ? ' warn' : ''}`}>{counts[badgeKey]}</span>

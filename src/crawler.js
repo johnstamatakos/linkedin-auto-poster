@@ -2,9 +2,11 @@ const axios = require('axios');
 const RSSParser = require('rss-parser');
 const { insertArticle } = require('./db');
 
+const BROWSER_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
 const rss = new RSSParser({
   timeout: 10000,
-  headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+  headers: { 'User-Agent': BROWSER_UA },
 });
 
 // ─── Hacker News ──────────────────────────────────────────────────────────────
@@ -53,7 +55,7 @@ async function crawlReddit(config) {
   const { subreddits = [], maxAgeHours = 72, minScore = 50 } = config.sources.reddit;
   const cutoffUnix = (Date.now() - maxAgeHours * 3600 * 1000) / 1000;
   const articles = [];
-  const headers = { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' };
+  const headers = { 'User-Agent': BROWSER_UA };
   let accessToken = null;
 
   if (process.env.REDDIT_CLIENT_ID && process.env.REDDIT_CLIENT_SECRET) {
@@ -170,7 +172,7 @@ async function checkReddit(redditConfig) {
   try {
     await axios.get(`https://www.reddit.com/r/${sub}/top.json`, {
       params: { t: 'week', limit: 1 },
-      headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+      headers: { 'User-Agent': BROWSER_UA },
       timeout: 8000,
     });
     return { ok: true, latency: Date.now() - t0 };
@@ -217,8 +219,6 @@ function dedupe(arr) {
 }
 
 // ─── TLDR ─────────────────────────────────────────────────────────────────────
-
-const BROWSER_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 function stripUtm(url) {
   try {

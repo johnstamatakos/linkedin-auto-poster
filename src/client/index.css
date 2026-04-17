@@ -63,7 +63,17 @@ body {
 .logo {
   padding: 0 20px 20px;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 12px;
+  margin-bottom: 8px;
+}
+
+.nav-section {
+  padding: 16px 20px 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  text-transform: uppercase;
+  opacity: 0.6;
 }
 
 .logo img {
@@ -75,10 +85,12 @@ body {
 .nav {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 20px;
+  gap: 9px;
+  padding: 8px 16px;
+  margin: 1px 8px;
+  border-radius: 7px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--muted);
   border-left: 2px solid transparent;
   transition: all .15s;
@@ -266,6 +278,118 @@ body {
 .dot-red   { background: var(--red); }
 
 
+/* ─── Dashboard Info Card ────────────────────────────────────────────────── */
+
+.dash-info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.dash-info-col {
+  padding: 14px 18px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+
+/* ─── Article Feed: Filter Bar ──────────────────────────────────────────── */
+
+.filter-bar {
+  display: flex;
+  align-items: stretch;
+  height: 36px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.filter-seg {
+  display: flex;
+  align-items: center;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.filter-seg:last-child { border-right: none; }
+
+.filter-seg select {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 12px;
+  padding: 0 12px;
+  outline: none;
+  cursor: pointer;
+  height: 100%;
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.filter-seg-icon   { padding: 0 10px 0 12px; }
+.filter-seg-score  { padding: 0 14px; gap: 10px; }
+.filter-seg-since  { padding: 0 12px; gap: 6px; }
+.filter-seg-meta   { margin-left: auto; padding: 0 12px; gap: 4px; flex-shrink: 0; }
+
+
+/* ─── Article Feed: Cards (mobile) ──────────────────────────────────────── */
+
+.feed-cards { display: none; }
+
+.article-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.article-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.article-card-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  text-decoration: none;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.article-card-insight {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.article-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted);
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.article-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  gap: 8px;
+}
+
+
 /* ─── LinkedIn Status Bar ────────────────────────────────────────────────── */
 
 .li-bar {
@@ -363,6 +487,45 @@ body {
 .add-feed             { display: grid; grid-template-columns: 1fr 2fr auto; gap: 8px; margin-top: 10px; }
 .add-feed input       { padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; color: var(--text); font-size: 13px; outline: none; }
 .add-feed input:focus { border-color: var(--accent); }
+
+
+/* ─── Range Slider ───────────────────────────────────────────────────────── */
+
+.range-thumb {
+  position: absolute;
+  width: 100%;
+  height: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  pointer-events: none;
+  outline: none;
+}
+
+.range-thumb::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--accent);
+  pointer-events: all;
+  cursor: pointer;
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.range-thumb::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--accent);
+  pointer-events: all;
+  cursor: pointer;
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--accent);
+}
 
 
 /* ─── Empty State ────────────────────────────────────────────────────────── */
@@ -643,13 +806,33 @@ body {
   .analytics-row            { flex-wrap: wrap; gap: 10px; }
   .skill-card-header        { flex-wrap: wrap; }
   .skill-card-actions       { flex-wrap: wrap; }
+
+  /* Dashboard info card */
+  .dash-action-row .btn { flex: 1; justify-content: center; }
+  .dash-info-grid       { grid-template-columns: 1fr 1fr; }
+
+  /* Feed: swap table for cards */
+  .feed-table { display: none; }
+  .feed-cards { display: flex; flex-direction: column; gap: 10px; }
+
+  /* Filter bar: stack into rows */
+  .filter-bar        { height: auto; flex-wrap: wrap; }
+  .filter-seg        { height: 40px; border-right: none; border-bottom: 1px solid var(--border); flex-shrink: 1; }
+  .filter-seg:last-child { border-bottom: none; }
+  .filter-seg-icon   { display: none; }
+  .filter-seg-src    { flex: 1; border-right: 1px solid var(--border); }
+  .filter-seg-status { flex: 1; }
+  .filter-seg-score  { flex: 1 1 100%; }
+  .filter-seg-since  { flex: 1; border-right: 1px solid var(--border); }
+  .filter-seg-meta   { flex: 1; margin-left: 0; justify-content: space-between; }
 }
 
 /* Small phones */
 @media (max-width: 480px) {
-  .main      { padding: 60px 12px 20px; }
-  .stat-val  { font-size: 22px; }
-  .stat      { padding: 14px 12px; }
-  .page-title { font-size: 18px; }
-  .btn       { padding: 7px 12px; }
+  .main           { padding: 60px 12px 20px; }
+  .stat-val       { font-size: 22px; }
+  .stat           { padding: 14px 12px; }
+  .page-title     { font-size: 18px; }
+  .btn            { padding: 7px 12px; }
+  .dash-info-grid { grid-template-columns: 1fr; }
 }

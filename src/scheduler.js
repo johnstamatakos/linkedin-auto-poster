@@ -3,12 +3,13 @@ const { runCrawl, checkSourceHealth } = require('./crawler');
 const { runPipeline }    = require('./pipeline');
 const { postToLinkedIn, getAuthStatus, fetchPostAnalytics } = require('./linkedin');
 const { getNextApprovedPost, markDraftPosted, insertPost,
-        getPostsPendingAnalytics, updatePostAnalytics, setSetting } = require('./db');
+        getPostsPendingAnalytics, updatePostAnalytics, setSetting, pruneArticles } = require('./db');
 
 let config       = null;
 let crawlJob     = null;
 let postJob      = null;
 let analyticsJob = null;
+let pruneJob     = null;
 
 // ─── Weekly Post ──────────────────────────────────────────────────────────────
 
@@ -93,6 +94,11 @@ async function runAnalyticsSync() {
 async function runCrawlAndPipeline(onProgress) {
   console.log('[scheduler] Crawl + pipeline starting...');
   try {
+    const pruned = pruneArticles();
+    if (pruned.pending || pruned.skipped || pruned.rejected) {
+      console.log(`[scheduler] Pruned ${pruned.pending} stale pending + ${pruned.skipped} expired + ${pruned.rejected} rejected articles`);
+    }
+
     onProgress?.({ msg: 'Checking source health...' });
     const health = await checkSourceHealth(config);
     setSetting('source_health', JSON.stringify(health));
@@ -147,12 +153,27 @@ function start(appConfig) {
   } else {
     console.error(`[scheduler] Invalid analytics cron: "${analyticsCron}"`);
   }
+
+  // Nightly prune — runs regardless of crawl schedule
+  pruneJob = cron.schedule('0 3 * * *', () => {
+    const pruned = pruneArticles();
+    if (pruned.pending || pruned.skipped || pruned.rejected) {
+      console.log(`[scheduler] Nightly prune: ${pruned.pending} pending + ${pruned.skipped} skipped + ${pruned.rejected} rejected removed`);
+    }
+  }, { scheduled: true, timezone: tz });
+
+  // Run once at startup to clean up immediately
+  const pruned = pruneArticles();
+  if (pruned.pending || pruned.skipped || pruned.rejected) {
+    console.log(`[scheduler] Startup prune: ${pruned.pending} pending + ${pruned.skipped} skipped + ${pruned.rejected} rejected removed`);
+  }
 }
 
 function stop() {
   crawlJob?.stop();
   postJob?.stop();
   analyticsJob?.stop();
+  pruneJob?.stop();
 }
 
 function updateConfig(newConfig) {

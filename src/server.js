@@ -7,10 +7,9 @@ const fs           = require('fs');
 const crypto       = require('crypto');
 
 const db = require('./db');
-const { getSourceStats, getEngagementTrends } = db;
 const { getAuthUrl, exchangeCode, getAuthStatus } = require('./linkedin');
 const scheduler = require('./scheduler');
-const { regenerateDraft, submitArticleUrl, reloadSkills } = require('./pipeline');
+const { regenerateDraft, submitArticleUrl, draftArticleById, reloadSkills } = require('./pipeline');
 const { checkSourceHealth } = require('./crawler');
 const { streamCalibration, appendPointOfView } = require('./calibrate');
 
@@ -28,6 +27,9 @@ const saveConfig  = (c) => fs.writeFileSync(CONFIG_PATH, JSON.stringify(c, null,
 const app = express();
 const PORT        = process.env.PORT || 3000;
 const UI_PASSWORD = process.env.UI_PASSWORD || 'changeme';
+
+if (!process.env.UI_PASSWORD)    console.warn('[security] UI_PASSWORD not set — using default. Set it in .env before exposing to the network.');
+if (!process.env.SESSION_SECRET) console.warn('[security] SESSION_SECRET not set — using default. Set it in .env before exposing to the network.');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -226,6 +228,58 @@ app.get('/api/analytics', requireLogin, (req, res) => {
     sources: db.getSourceStats(),
     trends:  db.getEngagementTrends(),
   });
+});
+
+// ─── Feed ─────────────────────────────────────────────────────────────────────
+
+app.get('/api/articles', requireLogin, (req, res) => {
+  const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
+  const articles = db.getAllArticles().map(a => {
+    const evalData = a.eval_data ? JSON.parse(a.eval_data) : null;
+    const expires_at = (a.status === 'skipped' && !a.starred)
+      ? new Date(new Date(a.fetched_at).getTime() + THREE_DAYS).toISOString()
+      : null;
+    const queued_for_deletion = !a.starred
+      && a.status === 'drafted'
+      && a.draft_status === 'rejected';
+    return {
+      id:                  a.id,
+      title:               a.title,
+      url:                 a.url,
+      source:              a.source,
+      status:              a.status,
+      draft_status:        a.draft_status || null,
+      fetched_at:          a.fetched_at,
+      eval_score:          a.eval_score,
+      key_insight:         evalData?.keyInsight || null,
+      eval_breakdown: evalData ? {
+        relevance:     evalData.relevanceScore     ?? null,
+        timeliness:    evalData.timelinessScore    ?? null,
+        specificity:   evalData.specificityScore   ?? null,
+        postPotential: evalData.postPotentialScore ?? null,
+        skipReason:    evalData.skipReason         || null,
+        similarityNote: evalData.similarityNote    || null,
+      } : null,
+      starred:             !!a.starred,
+      expires_at,
+      queued_for_deletion,
+    };
+  });
+  res.json(articles);
+});
+
+app.post('/api/articles/:id/draft', requireLogin, async (req, res) => {
+  try {
+    const result = await draftArticleById(Number(req.params.id), loadConfig());
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/articles/:id/star', requireLogin, (req, res) => {
+  const result = db.toggleArticleStar(Number(req.params.id));
+  res.json({ starred: !!result.starred });
 });
 
 // ─── Skills / Calibrate ───────────────────────────────────────────────────────

@@ -63,6 +63,9 @@ db.exec(`
 
 // ─── Migrations ───────────────────────────────────────────────────────────────
 
+const articleCols = new Set(db.prepare('PRAGMA table_info(articles)').all().map(c => c.name));
+if (!articleCols.has('starred')) db.exec('ALTER TABLE articles ADD COLUMN starred INTEGER NOT NULL DEFAULT 0');
+
 const postCols = new Set(db.prepare('PRAGMA table_info(posts)').all().map(c => c.name));
 if (!postCols.has('impressions'))          db.exec('ALTER TABLE posts ADD COLUMN impressions INTEGER');
 if (!postCols.has('reactions'))            db.exec('ALTER TABLE posts ADD COLUMN reactions INTEGER');
@@ -89,6 +92,56 @@ function updateArticleEval(id, score, evalData, status) {
 
 function markArticleDrafted(id) {
   db.prepare(`UPDATE articles SET status='drafted' WHERE id=?`).run(id);
+}
+
+function getArticleById(id) {
+  return db.prepare(`SELECT * FROM articles WHERE id = ?`).get(id);
+}
+
+function getAllArticles() {
+  return db.prepare(`
+    SELECT a.*,
+      (SELECT d.status FROM drafts d WHERE d.article_id = a.id ORDER BY d.created_at DESC LIMIT 1) as draft_status
+    FROM articles a
+    ORDER BY a.fetched_at DESC
+  `).all();
+}
+
+function toggleArticleStar(id) {
+  db.prepare(`UPDATE articles SET starred = CASE WHEN starred = 1 THEN 0 ELSE 1 END WHERE id = ?`).run(id);
+  return db.prepare(`SELECT starred FROM articles WHERE id = ?`).get(id);
+}
+
+function pruneArticles() {
+  return db.transaction(() => {
+    // Pending articles older than 5 days — stale, will never be evaluated
+    const pendingResult = db.prepare(`
+      DELETE FROM articles
+      WHERE status = 'pending' AND starred = 0 AND fetched_at < datetime('now', '-3 days')
+    `).run();
+
+    // Skipped articles older than 5 days (not starred)
+    const skippedResult = db.prepare(`
+      DELETE FROM articles
+      WHERE status = 'skipped' AND starred = 0 AND fetched_at < datetime('now', '-3 days')
+    `).run();
+
+    // Articles whose latest draft is rejected, with no active draft, not starred
+    const toDelete = db.prepare(`
+      SELECT a.id FROM articles a
+      WHERE a.starred = 0
+        AND a.status = 'drafted'
+        AND EXISTS     (SELECT 1 FROM drafts d WHERE d.article_id = a.id AND d.status = 'rejected')
+        AND NOT EXISTS (SELECT 1 FROM drafts d WHERE d.article_id = a.id AND d.status IN ('pending_review', 'approved', 'posted'))
+    `).all();
+
+    for (const { id } of toDelete) {
+      db.prepare(`DELETE FROM drafts  WHERE article_id = ?`).run(id);
+      db.prepare(`DELETE FROM articles WHERE id = ?`).run(id);
+    }
+
+    return { pending: pendingResult.changes, skipped: skippedResult.changes, rejected: toDelete.length };
+  })();
 }
 
 // ─── Drafts ───────────────────────────────────────────────────────────────────
@@ -288,6 +341,7 @@ function getStats() {
 
 module.exports = {
   insertArticle, getPendingArticles, updateArticleEval, markArticleDrafted, getArticleByUrl,
+  getArticleById, getAllArticles, toggleArticleStar, pruneArticles,
   insertDraft, getDraftsByStatus, getApprovedQueue, getDraftById,
   approveDraft, rejectDraft, getRecentRejectionNotes, getRecentPostTitles, updateDraftText, reorderQueue,
   getNextApprovedPost, markDraftPosted,

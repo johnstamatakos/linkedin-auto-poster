@@ -317,7 +317,7 @@ export default function Calibrate({ showToast }) {
             content={skillContents[s.name] || ''}
             onSaved={handleSaved}
             showToast={showToast}
-            defaultExpanded={idx === 0}
+            defaultExpanded={false}
           />
         ))}
       </div>

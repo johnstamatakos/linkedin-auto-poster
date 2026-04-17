@@ -32,14 +32,14 @@ export default function PostQueue({ showToast }) {
     dragSrc.current = null
   }
 
-  async function onDrop(e, ti) {
+  async function onDrop(e, targetIdx) {
     e.preventDefault()
     e.currentTarget.classList.remove('drag-over')
-    const si = dragSrc.current
-    if (si === null || si === ti) return
+    const srcIdx = dragSrc.current
+    if (srcIdx === null || srcIdx === targetIdx) return
     const next = [...queue]
-    const [moved] = next.splice(si, 1)
-    next.splice(ti, 0, moved)
+    const [moved] = next.splice(srcIdx, 1)
+    next.splice(targetIdx, 0, moved)
     setQueue(next)
     await api('/api/drafts/queue/reorder', 'POST', { orderedIds: next.map(d => d.id) })
     showToast('Order saved', 'success')
@@ -52,14 +52,12 @@ export default function PostQueue({ showToast }) {
     showToast('Removed', 'success')
   }
 
-  const postDay = config?.schedule?.postDayOfWeek || 'Tuesday'
-
   return (
     <>
       <div className="page-header">
         <div>
           <div className="page-title">Post Queue</div>
-          <div className="page-sub">Drag to reorder. First post publishes next {postDay}.</div>
+          <div className="page-sub">Drag to reorder. Posts publish on your configured schedule.</div>
         </div>
       </div>
 
