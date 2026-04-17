@@ -65,6 +65,7 @@ export default function Dashboard({ showToast, updateBadges }) {
   const [data, setData] = useState(null)
   const [crawling, setCrawling] = useState(false)
   const [draftModalOpen, setDraftModalOpen] = useState(false)
+  const [feedRefreshKey, setFeedRefreshKey] = useState(0)
 
   useEffect(() => {
     api('/api/dashboard').then(d => {
@@ -95,6 +96,7 @@ export default function Dashboard({ showToast, updateBadges }) {
               const n = data.pipelineResult?.draftsCreated || 0
               showToast(`Done! ${n} draft${n !== 1 ? 's' : ''} created.`)
               updateBadges()
+              setFeedRefreshKey(k => k + 1)
               break outer
             }
             if (data.error) { showToast(data.error, 'error'); break outer }
@@ -212,7 +214,7 @@ export default function Dashboard({ showToast, updateBadges }) {
       )}
 
       {/* Article feed */}
-      <ArticleFeed updateBadges={updateBadges} showToast={showToast} />
+      <ArticleFeed updateBadges={updateBadges} showToast={showToast} refreshKey={feedRefreshKey} />
 
       {/* Draft modal */}
       {draftModalOpen && (

@@ -226,7 +226,7 @@ function DraftButton({ articleId, drafting, onDraft }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function ArticleFeed({ updateBadges }) {
+export default function ArticleFeed({ updateBadges, refreshKey = 0 }) {
   const [articles, setArticles] = useState(null)
   const [sortKey, setSortKey]   = useState('fetched_at')
   const [sortDir, setSortDir]   = useState('desc')
@@ -238,7 +238,7 @@ export default function ArticleFeed({ updateBadges }) {
     [articles]
   )
 
-  useEffect(() => { api('/api/articles').then(setArticles) }, [])
+  useEffect(() => { api('/api/articles').then(setArticles) }, [refreshKey])
 
   async function toggleStar(id) {
     const { starred } = await api(`/api/articles/${id}/star`, 'POST')
