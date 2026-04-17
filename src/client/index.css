@@ -61,9 +61,19 @@ body {
 }
 
 .logo {
-  padding: 0 20px 20px;
+  padding: 0 20px 12px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 8px;
+}
+
+.logo-tagline {
+  padding: 8px 20px 12px;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+  opacity: 0.7;
 }
 
 .nav-section {
@@ -242,21 +252,23 @@ body {
 
 .btn {
   padding: 8px 16px;
-  border-radius: 7px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
+  letter-spacing: 0.01em;
   cursor: pointer;
   border: none;
-  transition: all .15s;
+  transition: all .15s ease;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
+  gap: 6px;
 }
 
 .btn-sm { padding: 6px 12px; font-size: 12px; }
 
-.btn-primary       { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: var(--accent-h); }
+.btn-primary       { background: linear-gradient(135deg, var(--accent) 0%, #4752c4 100%); color: #fff; box-shadow: 0 1px 3px rgba(88,101,242,0.3); }
+.btn-primary:hover { background: linear-gradient(135deg, #6470f3 0%, var(--accent) 100%); box-shadow: 0 2px 10px rgba(88,101,242,0.45); }
 
 .btn-success       { background: #065f46; color: var(--green); border: 1px solid #059669; }
 .btn-success:hover { background: #047857; }
@@ -264,11 +276,11 @@ body {
 .btn-danger        { background: #450a0a; color: var(--red); border: 1px solid #991b1b; }
 .btn-danger:hover  { background: #7f1d1d; }
 
-.btn-ghost         { background: transparent; color: var(--muted); border: 1px solid var(--border); }
-.btn-ghost:hover   { color: var(--text); border-color: #4a5080; }
+.btn-ghost         { background: rgba(255,255,255,0.04); color: var(--text); border: 1px solid var(--border); }
+.btn-ghost:hover   { background: rgba(255,255,255,0.08); border-color: #4a5080; }
 
-.btn-warn          { background: #78350f; color: var(--yellow); border: 1px solid #d97706; }
-.btn-warn:hover    { background: #92400e; }
+.btn-warn          { background: rgba(251,191,36,0.1); color: #fbbf24; border: 1px solid rgba(251,191,36,0.25); }
+.btn-warn:hover    { background: rgba(251,191,36,0.18); border-color: rgba(251,191,36,0.45); }
 
 
 /* ─── Status Dot ─────────────────────────────────────────────────────────── */

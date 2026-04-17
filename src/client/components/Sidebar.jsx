@@ -37,6 +37,7 @@ export default function Sidebar({ currentPage, onNavigate, pendingCount, queueCo
   return (
     <nav className={`sidebar${isOpen ? ' open' : ''}`}>
       <div className="logo"><img src="/logo.png" alt="Logo" /></div>
+      <div className="logo-tagline">Skip the noise. Keep the signal.</div>
       <div className="nav-section">Navigation</div>
       {NAV_ITEMS.map(({ page, label, icon, badgeKey, warn }) => (
         <div
