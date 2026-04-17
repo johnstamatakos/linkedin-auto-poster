@@ -1,4 +1,4 @@
-# Curator
+# Vantage
 
 A personal tech news aggregator that learns who you are, what you believe, and what you care about — then surfaces only the articles worth your attention.
 
@@ -154,7 +154,7 @@ Open http://localhost:3000, sign in, connect LinkedIn, then go to **Calibrate** 
 **DigitalOcean ($6/mo)**:
 ```bash
 sudo apt install -y nodejs npm build-essential python3
-git clone <your-repo> /opt/curator && cd /opt/curator
+git clone <your-repo> /opt/vantage && cd /opt/vantage
 npm install && cp .env.example .env && nano .env
 npm install -g pm2
 pm2 start src/server.js --name curator && pm2 save && pm2 startup

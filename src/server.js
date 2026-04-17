@@ -365,9 +365,9 @@ scheduler.start(loadConfig());
 
 app.listen(PORT, () => {
   console.log(`
-╔═══════════════════════════════════════════╗
-║  LinkedIn Auto Poster — http://localhost:${PORT} ║
-╚═══════════════════════════════════════════╝
+╔═══════════════════════════════════════╗
+║  Vantage — http://localhost:${PORT}         ║
+╚═══════════════════════════════════════╝
   `);
 });
 

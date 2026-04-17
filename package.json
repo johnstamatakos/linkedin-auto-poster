@@ -1,7 +1,7 @@
 {
-  "name": "linkedin-auto-poster",
+  "name": "vantage",
   "version": "1.0.0",
-  "description": "Autonomous LinkedIn post generator and scheduler",
+  "description": "Personal tech news aggregator calibrated to your experience and opinions",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
